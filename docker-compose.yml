@@ -1,0 +1,19 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: barberbook_db
+    environment:
+      MYSQL_DATABASE: barberbook
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - "3307:3306"
+
+  backend:
+    build: ./BarberBook/Backend  # <--- AQUÍ está el cambio
+    container_name: barberbook_api
+    volumes:
+      - ./BarberBook/Backend:/app # <--- AQUÍ también
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db

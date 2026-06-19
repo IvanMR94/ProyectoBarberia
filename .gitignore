@@ -1,0 +1,12 @@
+# .gitignore
+venv/
+__pycache__/
+*.pyc
+db.sqlite3
+.env
+.vscode/
+.DS_Store
+*.log
+
+# Carpetas personales / experimentales
+BarberBook/Agente/
