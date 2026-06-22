@@ -28,7 +28,8 @@ INSTALLED_APPS = [
     'rest_framework',        # Nuestra API
     'rest_framework_simplejwt',
     'corsheaders',
-    'users',  # <--- nueva app
+    'users',
+    'barberia',
 ]
 
 MIDDLEWARE = [
@@ -94,7 +95,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es-ar'
 
 TIME_ZONE = 'UTC'
 
@@ -110,3 +111,25 @@ STATIC_URL = 'static/'
 
 # settings.py
 AUTH_USER_MODEL = 'users.User'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+
+# Añade esto debajo de REST_FRAMEWORK
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
+
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

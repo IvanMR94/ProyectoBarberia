@@ -9,10 +9,10 @@ services:
       - "3307:3306"
 
   backend:
-    build: ./BarberBook/Backend  # <--- AQUÍ está el cambio
+    build: ./BarberBook/Backend 
     container_name: barberbook_api
     volumes:
-      - ./BarberBook/Backend:/app # <--- AQUÍ también
+      - ./BarberBook/Backend:/app 
     ports:
       - "8000:8000"
     depends_on:
