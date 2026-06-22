@@ -1,39 +1,27 @@
-from datetime import datetime, timedelta, date
-from django.core.exceptions import ValidationError
-from django.utils import timezone  # Necesario para manejar zonas horarias
+from datetime import date
 from .models import Cita
 
 def get_disponibilidad_barbero(barbero_id, fecha):
-    """
-    Motor de cálculo de disponibilidad:
-    Calcula bloques disponibles restando citas ocupadas.
-    """
-
-    # 1. Validar fecha
+    # 1. Validar fecha (opcional, si quieres permitir consultar el mismo día)
     if fecha < date.today():
-        raise ValidationError("No puedes consultar disponibilidad en fechas pasadas.")
+        return [] # O lanza el error si prefieres
     
     # 2. Definir rango laboral
-    inicio_laboral = datetime.combine(fecha, datetime.strptime("09:00", "%H:%M").time())
-    fin_laboral = datetime.combine(fecha, datetime.strptime("21:00", "%H:%M").time())
-
-    # 3. Obtener citas ocupadas y convertirlas a 'naive' (sin zona horaria) para comparar
-    citas_raw = Cita.objects.filter(
+    hora_inicio = 9
+    hora_fin = 21
+    
+    # 3. Obtener citas ocupadas filtrando por barbero Y FECHA EXACTA
+    citas_ocupadas = Cita.objects.filter(
         barbero_id=barbero_id,
         fecha_hora_inicio__date=fecha
-    ).exclude(estado='CANCELADA').values_list('fecha_hora_inicio', flat=True)
+    ).exclude(estado='CANCELADA').values_list('fecha_hora_inicio__hour', flat=True)
     
-    # Normalizamos las citas de la BD a naive quitando la zona horaria
-    citas_ocupadas = [c.replace(tzinfo=None) for c in citas_raw]
+    citas_ocupadas = list(citas_ocupadas)
     
-    # 4. Lógica de cálculo
+    # 4. Generar bloques disponibles
     disponibles = []
-    bloque_actual = inicio_laboral
-    
-    while bloque_actual < fin_laboral:
-        # Ahora ambos están en el mismo formato naive
-        if bloque_actual not in citas_ocupadas:
-            disponibles.append(bloque_actual.strftime("%H:%M"))
-        bloque_actual += timedelta(hours=1)
+    for hora in range(hora_inicio, hora_fin):
+        if hora not in citas_ocupadas:
+            disponibles.append(f"{hora:02d}:00")
         
     return disponibles
