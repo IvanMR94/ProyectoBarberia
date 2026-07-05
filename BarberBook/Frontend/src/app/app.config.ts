@@ -1,13 +1,14 @@
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient, withFetch } from '@angular/common/http'; // Importante para peticiones HTTP
-
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { authInterceptor } from '../app/interceptors/auth-interceptor'; 
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withFetch()) // Esto habilita el cliente HTTP de Angular
+    // Registramos el interceptor aca para que todas las peticiones lleven el token
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor])) 
   ]
 };

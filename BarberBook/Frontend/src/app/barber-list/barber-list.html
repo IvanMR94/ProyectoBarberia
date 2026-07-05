@@ -1,11 +1,12 @@
-<section class="p-6">
-  <h2 class="text-2xl font-bold text-blue-900 mb-6">Nuestros Profesionales</h2>
+<section class="max-w-4xl mx-auto p-6">
+  <h2 class="text-3xl font-bold text-blue-900 mb-8">Nuestros Profesionales</h2>
   
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     @for (barber of barbers(); track barber.id) {
-      <div class="bg-white p-4 rounded-xl border border-sky-100 shadow-sm">
-        <h3 class="text-blue-800 font-semibold">{{ barber.nombre }} {{ barber.apellido }}</h3>
-        <button (click)="openAgenda(barber)" class="mt-3 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+      <div class="bg-white p-6 rounded-2xl border border-sky-50 shadow-sm hover:shadow-md transition-shadow">
+        <h3 class="text-xl font-bold text-blue-800">{{ barber.nombre }} {{ barber.apellido }}</h3>
+        <p class="text-slate-500 mt-1 text-sm">Especialista disponible</p>
+        <button (click)="openAgenda(barber)" class="mt-5 w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors">
           Ver Agenda
         </button>
       </div>
@@ -16,23 +17,24 @@
 </section>
 
 @if (isModalOpen()) {
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-    <div class="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl">
-      <h2 class="text-xl font-bold mb-4 text-blue-900">Agenda de {{ selectedBarber()?.nombre }}</h2>
+  <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl">
+      <h2 class="text-2xl font-bold mb-1 text-blue-900">Agenda de {{ selectedBarber()?.nombre }}</h2>
+      <p class="text-slate-400 text-sm mb-6">Selecciona tu horario disponible:</p>
       
-      <div class="grid grid-cols-3 gap-2 mt-4">
+      <div class="grid grid-cols-3 gap-3 mt-4">
         @for (hora of disponibilidad(); track hora) {
-          <button (click)="reservarCita(hora)" class="border border-blue-500 text-blue-600 rounded p-2 hover:bg-blue-600 hover:text-white transition">
+          <button (click)="reservarCita(hora)" class="bg-sky-50 text-blue-700 font-bold rounded-xl p-3 hover:bg-blue-600 hover:text-white transition-all">
             {{ hora }}
           </button>
         } @empty {
-          <p class="text-sm text-gray-500">No hay horarios disponibles hoy.</p>
+          <p class="text-sm text-slate-400 col-span-3 text-center py-4">No hay horarios disponibles hoy.</p>
         }
       </div>
 
-      <button (click)="closeModal()" class="mt-6 w-full bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition">
+      <button (click)="closeModal()" class="mt-8 w-full bg-slate-100 text-slate-600 font-medium py-3 rounded-xl hover:bg-slate-200 transition-colors">
         Cerrar
       </button>
     </div>
   </div>
-}
+} 

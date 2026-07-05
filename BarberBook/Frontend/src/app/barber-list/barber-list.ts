@@ -1,4 +1,5 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { Barber } from '../models/barber.model';
 import { ApiService } from '../services/api'; 
 
@@ -14,6 +15,7 @@ export class BarberListComponent implements OnInit {
   disponibilidad = signal<string[]>([]);
   
   private apiService = inject(ApiService);
+  private router = inject(Router);
 
   ngOnInit() {
     this.loadBarbers();
@@ -44,6 +46,16 @@ export class BarberListComponent implements OnInit {
   }
 
   reservarCita(hora: string) {
+    // Verificamos si hay token antes de intentar reservar
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      if (confirm('¡Ups! Necesitas una cuenta para reservar. ¿Quieres registrarte ahora?')) {
+        this.router.navigate(['/register']);
+      }
+      return;
+    }
+
     const fechaHoy = new Date().toISOString().split('T')[0];
     const payload = {
       barbero: this.selectedBarber()?.id,
@@ -53,10 +65,14 @@ export class BarberListComponent implements OnInit {
 
     this.apiService.postCita(payload).subscribe({
       next: () => {
-        alert('Cita reservada con éxito');
+        alert('¡Cita reservada con éxito!');
         this.closeModal();
+        this.router.navigate(['/my-appointments']);
       },
-      error: (err) => console.error('Error al reservar:', err)
+      error: (err) => {
+        console.error('Error al reservar:', err);
+        alert('Hubo un error al reservar. Por favor intenta de nuevo.');
+      }
     });
   }
 }

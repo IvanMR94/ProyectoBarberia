@@ -1,35 +1,32 @@
 import { Component, inject } from '@angular/core';
-import { ApiService } from '../services/api';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { ApiService } from '../services/api';
 
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [FormsModule],
-  template: `
-    <div class="p-6">
-      <input [(ngModel)]="username" placeholder="Usuario" class="border p-2">
-      <input [(ngModel)]="password" type="password" placeholder="Contraseña" class="border p-2">
-      <button (click)="login()" class="bg-blue-600 text-white p-2">Ingresar</button>
-    </div>
-  `
+  templateUrl: './login.html'
 })
 export class LoginComponent {
-  username = ''; password = '';
+  credentials = { username: '', password: '' };
   private api = inject(ApiService);
+  private router = inject(Router);
 
   login() {
-  const credentials = {
-    username: this.username,
-    password: this.password
-  };
-
-  this.api.login(credentials).subscribe({
-    next: (res) => {
-      localStorage.setItem('token', res.access);
-      alert('Login exitoso');
-    },
-    error: (err) => console.error('Error de login:', err)
-  });
-}
+    this.api.login(this.credentials).subscribe({
+      next: (res) => {
+        // Guardamos el token en localStorage
+        localStorage.setItem('token', res.access);
+        alert('¡Bienvenido!');
+        // Redirigimos a la lista de barberos o a citas
+        this.router.navigate(['/barbers']);
+      },
+      error: (err) => {
+        console.error('Error de login:', err);
+        alert('Usuario o contraseña incorrectos.');
+      }
+    });
+  }
 }

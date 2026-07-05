@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
@@ -24,20 +24,21 @@ export class ApiService {
   // --- MÉTODOS DE AUTENTICACIÓN ---
 
   login(credentials: any): Observable<any> {
-    // Asumiendo que tu endpoint de login es /auth/login/
     return this.http.post(`${this.baseUrl}/auth/login/`, credentials);
   }
 
-  // --- MÉTODOS PRIVADOS (Requieren Autenticación) ---
+  // Nuevo método para registrarse
+  register(userData: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/auth/register/`, userData);
+  }
+
+  // --- MÉTODOS PRIVADOS ---
 
   getMyAppointments(): Observable<any> {
-    const token = localStorage.getItem('token');
-    
-    // Configuramos los headers para enviar el token JWT
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${token}`
-    });
+    return this.http.get(`${this.baseUrl}/my-appointments/`);
+  }
 
-    return this.http.get(`${this.baseUrl}/my-appointments/`, { headers });
+  cancelarCita(id: number): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/appointments/${id}/`);
   }
 }

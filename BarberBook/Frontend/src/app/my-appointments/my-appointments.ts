@@ -28,4 +28,13 @@ export class MyAppointmentsComponent implements OnInit {
       }
     });
   }
+
+  cancelarCita(id: number) {
+    if (confirm('¿Estás seguro de que quieres cancelar esta cita?')) {
+      this.apiService.cancelarCita(id).subscribe({
+        next: () => this.loadCitas(),
+        error: (err) => console.error('Error al cancelar:', err)
+      });
+    }
+  }
 }
