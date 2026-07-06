@@ -36,18 +36,21 @@ class DisponibilidadBarberoView(APIView):
 class CitaCreateView(generics.CreateAPIView):
     queryset = Cita.objects.all()
     serializer_class = CitaSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        User = get_user_model()
-        usuario_por_defecto = User.objects.first()
-        serializer.save(cliente=usuario_por_defecto)
+        # Asignamos al usuario logueado como cliente
+        serializer.save(cliente=self.request.user)
 
-# --- Vista para actualizar citas ---
-class CitaUpdateView(generics.UpdateAPIView):
+# --- Vista para actualizar y cancelar ---
+class CitaManageView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Cita.objects.all()
     serializer_class = CitaUpdateSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Solo permite modificar o borrar citas del usuario logueado
+        return Cita.objects.filter(cliente=self.request.user)
 
 # --- NUEVA VISTA: Historial de citas del usuario ---
 class MisCitasListView(generics.ListAPIView):
@@ -57,3 +60,20 @@ class MisCitasListView(generics.ListAPIView):
     def get_queryset(self):
         # Filtra las citas que pertenecen al usuario que envió el token
         return Cita.objects.filter(cliente=self.request.user).order_by('-fecha_hora_inicio')
+    
+
+class BarberDashboardView(generics.ListAPIView):
+    serializer_class = CitaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Filtramos citas donde el 'barbero__usuario' sea el usuario logueado
+        return Cita.objects.filter(barbero__usuario=self.request.user).order_by('fecha_hora_inicio')
+    
+class BarberCitaUpdateView(generics.UpdateAPIView):
+    serializer_class = CitaUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # El barbero puede editar CUALQUIER cita que le haya sido asignada a él
+        return Cita.objects.filter(barbero__usuario=self.request.user)

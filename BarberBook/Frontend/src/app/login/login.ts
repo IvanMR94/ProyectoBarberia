@@ -1,32 +1,38 @@
 import { Component, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService } from '../services/api';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule],
+  imports: [ReactiveFormsModule], // Cambiamos FormsModule por ReactiveFormsModule
   templateUrl: './login.html'
 })
 export class LoginComponent {
-  credentials = { username: '', password: '' };
   private api = inject(ApiService);
   private router = inject(Router);
+  private fb = inject(FormBuilder);
+
+  // Definimos el formulario con validaciones profesionales
+  loginForm: FormGroup = this.fb.group({
+    username: ['', [Validators.required, Validators.email]],
+    password: ['', [Validators.required, Validators.minLength(6)]]
+  });
 
   login() {
-    this.api.login(this.credentials).subscribe({
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched(); // Marca todo como tocado para mostrar errores
+      return;
+    }
+
+    this.api.login(this.loginForm.value).subscribe({
       next: (res) => {
-        // Guardamos el token en localStorage
         localStorage.setItem('token', res.access);
-        alert('¡Bienvenido!');
-        // Redirigimos a la lista de barberos o a citas
+        this.api.updateAuthStatus();
         this.router.navigate(['/barbers']);
       },
-      error: (err) => {
-        console.error('Error de login:', err);
-        alert('Usuario o contraseña incorrectos.');
-      }
+      error: () => alert('Credenciales inválidas, intenta nuevamente.')
     });
   }
 }

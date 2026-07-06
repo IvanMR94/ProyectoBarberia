@@ -2,30 +2,28 @@
   <h2 class="text-2xl font-bold text-blue-900 mb-6">Mis Próximas Citas</h2>
   
   <div class="space-y-4">
-    @for (cita of citas(); track cita.id) {
-      <div class="bg-white p-5 rounded-2xl border border-sky-100 shadow-sm flex justify-between items-center transition hover:border-blue-200">
-        <div>
-          <p class="font-bold text-blue-800 text-lg">
-            {{ cita.fecha_hora_inicio | date:'dd/MM/yyyy HH:mm' }}
-          </p>
-          <p class="text-sm text-slate-500">
-            Estado: <span class="font-semibold text-blue-600">{{ cita.estado }}</span>
-          </p>
-        </div>
-        
-        <div class="flex items-center gap-3">
-          <button 
-            (click)="cancelarCita(cita.id)" 
-            class="text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg transition-all"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    } @empty {
-      <div class="text-center py-10 bg-sky-50 rounded-2xl border border-dashed border-sky-200">
-        <p class="text-blue-400 font-medium">No tienes citas programadas actualmente.</p>
-      </div>
-    }
+   @for (cita of citas(); track cita.id) {
+  <div class="bg-white p-5 rounded-2xl border border-sky-100 shadow-sm flex justify-between items-center">
+    <div>
+      <p class="font-bold text-blue-800">{{ cita.fecha_hora_inicio | date:'dd/MM/yyyy HH:mm' }}</p>
+      <p class="text-sm">Estado: <span class="font-bold text-blue-600">{{ cita.estado }}</span></p>
+    </div>
+    
+    <div class="flex gap-2">
+      @if (cita.estado === 'PENDIENTE') {
+        <button (click)="cancelarCita(cita.id)" class="px-3 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-200">
+          Cancelar
+        </button>
+      }
+      @if (cita.estado === 'CANCELADA') {
+        <button (click)="eliminarCita(cita.id)" class="px-3 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-bold hover:bg-red-200">
+          Eliminar
+        </button>
+      }
+    </div>
+  </div>
+} @empty {
+  <p class="text-center text-slate-400">No tienes citas registradas.</p>
+}
   </div>
 </section>

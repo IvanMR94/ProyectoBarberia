@@ -1,0 +1,40 @@
+<div class="max-w-4xl mx-auto p-6">
+  <h2 class="text-2xl font-bold mb-6 text-slate-800">Mi Agenda de Trabajo</h2>
+  
+  <div class="space-y-4">
+    @for (cita of citas(); track cita.id) {
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center transition-all hover:shadow-md">
+        
+        <div>
+          <p class="text-lg font-bold text-blue-900">
+            {{ cita.fecha_hora_inicio | date:'dd/MM/yyyy HH:mm' }}
+          </p>
+          <p class="text-sm text-slate-500 mt-1">
+            Estado: 
+            <span class="font-bold px-3 py-1 rounded-full text-xs" 
+                  [ngClass]="{
+                    'bg-green-100 text-green-700': cita.estado === 'COMPLETADA',
+                    'bg-amber-100 text-amber-700': cita.estado === 'PENDIENTE',
+                    'bg-red-100 text-red-700': cita.estado === 'CANCELADA'
+                  }">
+              {{ cita.estado }}
+            </span>
+          </p>
+        </div>
+
+        <div class="flex gap-3">
+          @if (cita.estado === 'PENDIENTE') {
+            <button (click)="completarCita(cita.id)" 
+                    class="px-5 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-sm active:scale-95">
+              Finalizar Cita
+            </button>
+          }
+        </div>
+      </div>
+    } @empty {
+      <div class="text-center py-16 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+        <p class="text-slate-400 font-medium">No tienes citas programadas para hoy.</p>
+      </div>
+    }
+  </div>
+</div>

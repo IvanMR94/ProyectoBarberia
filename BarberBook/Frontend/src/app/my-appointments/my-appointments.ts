@@ -1,11 +1,11 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { ApiService } from '../services/api';
-import { DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common'; // IMPORTANTE: incluye DatePipe
 
 @Component({
   selector: 'app-my-appointments',
   standalone: true,
-  imports: [DatePipe],
+  imports: [CommonModule], // Agregamos CommonModule aquí
   templateUrl: './my-appointments.html',
 })
 export class MyAppointmentsComponent implements OnInit {
@@ -18,23 +18,32 @@ export class MyAppointmentsComponent implements OnInit {
 
   loadCitas() {
     this.apiService.getMyAppointments().subscribe({
-      next: (data) => this.citas.set(data),
+      next: (data) => {
+        console.log('Datos recibidos del backend:', data); // <--- MIRA ESTO EN LA CONSOLA
+        this.citas.set(data);
+      },
       error: (err) => {
-        if (err.status === 401) {
-          alert('Tu sesión ha expirado, por favor inicia sesión de nuevo.');
-        } else {
-          console.error('Error cargando citas:', err);
-        }
+        console.error('Error cargando citas:', err);
       }
     });
   }
 
-  cancelarCita(id: number) {
-    if (confirm('¿Estás seguro de que quieres cancelar esta cita?')) {
-      this.apiService.cancelarCita(id).subscribe({
-        next: () => this.loadCitas(),
-        error: (err) => console.error('Error al cancelar:', err)
-      });
-    }
+  // En tu MyAppointmentsComponent
+cancelarCita(id: number) {
+  if (confirm('¿Cancelar esta cita? El registro se mantendrá en tu historial.')) {
+    this.apiService.updateCita(id, { estado: 'CANCELADA' }).subscribe({
+      next: () => this.loadCitas(),
+      error: () => alert('Error al cancelar.')
+    });
   }
+}
+
+eliminarCita(id: number) {
+  if (confirm('¿Eliminar definitivamente este registro del historial?')) {
+    this.apiService.cancelarCita(id).subscribe({
+      next: () => this.loadCitas(),
+      error: () => alert('Error al eliminar.')
+    });
+  }
+}
 }

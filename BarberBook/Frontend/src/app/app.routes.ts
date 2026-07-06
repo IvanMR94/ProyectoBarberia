@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth-guard';
+import { BarberDashboardComponent } from './barber-dashboard/barber-dashboard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'barbers', pathMatch: 'full' },
@@ -20,4 +21,5 @@ export const routes: Routes = [
     loadComponent: () => import('../app/my-appointments/my-appointments').then(m => m.MyAppointmentsComponent),
     canActivate: [authGuard] 
   },
+  { path: 'barber-dashboard', component: BarberDashboardComponent },
 ];
