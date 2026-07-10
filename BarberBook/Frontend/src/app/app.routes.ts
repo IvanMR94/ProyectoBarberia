@@ -21,5 +21,9 @@ export const routes: Routes = [
     loadComponent: () => import('../app/my-appointments/my-appointments').then(m => m.MyAppointmentsComponent),
     canActivate: [authGuard] 
   },
-  { path: 'barber-dashboard', component: BarberDashboardComponent },
+  { 
+    path: 'barber-dashboard', 
+    component: BarberDashboardComponent,
+    canActivate: [authGuard] 
+  },
 ];

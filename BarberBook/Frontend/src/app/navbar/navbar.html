@@ -6,7 +6,12 @@
       <a routerLink="/barbers" routerLinkActive="text-blue-600 font-bold" class="text-blue-800 hover:text-blue-500 transition">Agenda</a>
       
       @if (isLoggedIn()) {
-        <a routerLink="/my-appointments" routerLinkActive="text-blue-600 font-bold" class="text-blue-800 hover:text-blue-500 transition">Mis Citas</a>
+        @if (esBarbero()) {
+          <a routerLink="/barber-dashboard" routerLinkActive="text-blue-600 font-bold" class="text-blue-800 hover:text-blue-500 transition">Dashboard</a>
+        } @else {
+          <a routerLink="/my-appointments" routerLinkActive="text-blue-600 font-bold" class="text-blue-800 hover:text-blue-500 transition">Mis Citas</a>
+        }
+        
         <button (click)="logout()" class="bg-red-50 text-red-600 px-4 py-1 rounded-full hover:bg-red-100 transition text-sm">
           Salir
         </button>

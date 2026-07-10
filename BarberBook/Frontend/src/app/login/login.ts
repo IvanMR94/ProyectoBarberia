@@ -6,7 +6,7 @@ import { ApiService } from '../services/api';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule], // Cambiamos FormsModule por ReactiveFormsModule
+  imports: [ReactiveFormsModule],
   templateUrl: './login.html'
 })
 export class LoginComponent {
@@ -14,7 +14,6 @@ export class LoginComponent {
   private router = inject(Router);
   private fb = inject(FormBuilder);
 
-  // Definimos el formulario con validaciones profesionales
   loginForm: FormGroup = this.fb.group({
     username: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]]
@@ -22,15 +21,25 @@ export class LoginComponent {
 
   login() {
     if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched(); // Marca todo como tocado para mostrar errores
+      this.loginForm.markAllAsTouched();
       return;
     }
 
     this.api.login(this.loginForm.value).subscribe({
       next: (res) => {
+        // Aseguramos que rol tenga un valor por defecto si res.rol llegara a fallar
+        const rol = res.rol || 'CLIENTE';
+        
         localStorage.setItem('token', res.access);
+        localStorage.setItem('rol', rol);
+        
         this.api.updateAuthStatus();
-        this.router.navigate(['/barbers']);
+        
+        if (rol === 'BARBERO') {
+          this.router.navigate(['/barber-dashboard']);
+        } else {
+          this.router.navigate(['/my-appointments']);
+        }
       },
       error: () => alert('Credenciales inválidas, intenta nuevamente.')
     });

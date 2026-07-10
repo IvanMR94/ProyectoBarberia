@@ -1,8 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 
-// Definición de la estructura de datos (Modelo)
 export interface Cita {
   id: number;
   barbero: number;
@@ -16,7 +15,6 @@ export class ApiService {
   private http = inject(HttpClient);
   private readonly baseUrl = 'http://127.0.0.1:8000/api/v1';
 
-  // Centralización de rutas (Evita el hardcodeo en los métodos)
   private readonly ENDPOINTS = {
     login: `${this.baseUrl}/auth/login/`,
     register: `${this.baseUrl}/auth/register/`,
@@ -33,21 +31,7 @@ export class ApiService {
     this.authStatus.next(!!localStorage.getItem('token'));
   }
 
-  private getHeaders() {
-    const token = localStorage.getItem('token');
-    return {
-      headers: new HttpHeaders({
-        'Authorization': `Bearer ${token}`
-      })
-    };
-  }
-
- 
-  updateBarberCita(id: number, data: any): Observable<any> {
-    return this.http.patch(`http://127.0.0.1:8000/api/v1/barber-appointments/${id}/`, data, this.getHeaders());
-  }
-
-  // --- MÉTODOS ---
+  // --- MÉTODOS (Ya no necesitan getHeaders, el Interceptor lo hace) ---
   login(credentials: any): Observable<any> {
     return this.http.post(this.ENDPOINTS.login, credentials);
   }
@@ -65,22 +49,26 @@ export class ApiService {
   }
 
   postCita(data: any): Observable<Cita> {
-    return this.http.post<Cita>(this.ENDPOINTS.appointments, data, this.getHeaders());
+    return this.http.post<Cita>(this.ENDPOINTS.appointments, data);
   }
 
   getMyAppointments(): Observable<Cita[]> {
-    return this.http.get<Cita[]>(this.ENDPOINTS.myAppointments, this.getHeaders());
+    return this.http.get<Cita[]>(this.ENDPOINTS.myAppointments);
   }
 
   getBarberAppointments(): Observable<Cita[]> {
-    return this.http.get<Cita[]>(this.ENDPOINTS.barberDashboard, this.getHeaders());
+    return this.http.get<Cita[]>(this.ENDPOINTS.barberDashboard);
+  }
+
+  updateBarberCita(id: number, data: any): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/barber-appointments/${id}/`, data);
   }
 
   updateCita(id: number, data: Partial<Cita>): Observable<Cita> {
-    return this.http.patch<Cita>(`${this.ENDPOINTS.appointments}${id}/`, data, this.getHeaders());
+    return this.http.patch<Cita>(`${this.ENDPOINTS.appointments}${id}/`, data);
   }
 
   cancelarCita(id: number): Observable<any> {
-    return this.http.delete(`${this.ENDPOINTS.appointments}${id}/`, this.getHeaders());
+    return this.http.delete(`${this.ENDPOINTS.appointments}${id}/`);
   }
 }

@@ -12,19 +12,20 @@ export class NavbarComponent {
   private api = inject(ApiService);
   private router = inject(Router);
   
-  // Usamos señal para que Angular sepa cuándo redibujar el HTML
   isLoggedIn = signal(!!localStorage.getItem('token'));
+  esBarbero = signal(localStorage.getItem('rol') === 'BARBERO');
 
   constructor() {
-    // Escuchamos el canal de noticias del servicio
     this.api.authStatus$.subscribe(status => {
       this.isLoggedIn.set(status);
+      this.esBarbero.set(localStorage.getItem('rol') === 'BARBERO');
     });
   }
 
   logout() {
     localStorage.removeItem('token');
-    this.api.updateAuthStatus(); // <--- ¡Avisamos que cerramos sesión!
+    localStorage.removeItem('rol');
+    this.api.updateAuthStatus();
     this.router.navigate(['/login']);
   }
 }
