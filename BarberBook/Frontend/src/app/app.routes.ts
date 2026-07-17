@@ -19,11 +19,13 @@ export const routes: Routes = [
   { 
     path: 'my-appointments', 
     loadComponent: () => import('../app/my-appointments/my-appointments').then(m => m.MyAppointmentsComponent),
-    canActivate: [authGuard] 
+    canActivate: [authGuard],
+    data: { role: 'CLIENTE' }
   },
   { 
     path: 'barber-dashboard', 
     component: BarberDashboardComponent,
-    canActivate: [authGuard] 
+    canActivate: [authGuard],
+    data: { role: 'BARBERO' }
   },
 ];

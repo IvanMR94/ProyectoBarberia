@@ -27,21 +27,28 @@ export class LoginComponent {
 
     this.api.login(this.loginForm.value).subscribe({
       next: (res) => {
-        // Aseguramos que rol tenga un valor por defecto si res.rol llegara a fallar
+        // 1. LIMPIEZA PREVIA: Aseguramos borrar cualquier residuo anterior
+        localStorage.clear(); 
+
+        // 2. GUARDADO
         const rol = res.rol || 'CLIENTE';
-        
-        localStorage.setItem('token', res.access);
+        localStorage.setItem('access', res.access);
         localStorage.setItem('rol', rol);
         
+        // 3. ACTUALIZACIÓN DEL ESTADO
         this.api.updateAuthStatus();
         
+        // 4. REDIRECCIÓN
         if (rol === 'BARBERO') {
           this.router.navigate(['/barber-dashboard']);
         } else {
           this.router.navigate(['/my-appointments']);
         }
       },
-      error: () => alert('Credenciales inválidas, intenta nuevamente.')
+      error: (err) => {
+        console.error('Error de login:', err);
+        alert('Credenciales inválidas, intenta nuevamente.');
+      }
     });
   }
 }

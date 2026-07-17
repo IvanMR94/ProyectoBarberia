@@ -1,49 +1,48 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { ApiService } from '../services/api';
-import { CommonModule } from '@angular/common'; // IMPORTANTE: incluye DatePipe
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-my-appointments',
   standalone: true,
-  imports: [CommonModule], // Agregamos CommonModule aquí
+  imports: [CommonModule],
   templateUrl: './my-appointments.html',
 })
 export class MyAppointmentsComponent implements OnInit {
   citas = signal<any[]>([]);
+  isLoading = signal<boolean>(false);
   private apiService = inject(ApiService);
 
-  ngOnInit() {
-    this.loadCitas();
-  }
+  ngOnInit() { this.loadCitas(); }
 
   loadCitas() {
+    this.isLoading.set(true);
     this.apiService.getMyAppointments().subscribe({
       next: (data) => {
-        console.log('Datos recibidos del backend:', data); // <--- MIRA ESTO EN LA CONSOLA
         this.citas.set(data);
+        this.isLoading.set(false);
       },
-      error: (err) => {
-        console.error('Error cargando citas:', err);
-      }
+      error: () => this.isLoading.set(false)
     });
   }
 
-  // En tu MyAppointmentsComponent
-cancelarCita(id: number) {
-  if (confirm('¿Cancelar esta cita? El registro se mantendrá en tu historial.')) {
-    this.apiService.updateCita(id, { estado: 'CANCELADA' }).subscribe({
-      next: () => this.loadCitas(),
-      error: () => alert('Error al cancelar.')
-    });
+  cancelarCita(id: number) {
+    if (confirm('¿Cancelar esta cita?')) {
+      this.isLoading.set(true);
+      this.apiService.updateCita(id, { estado: 'CANCELADA' }).subscribe({
+        next: () => this.loadCitas(),
+        error: () => this.isLoading.set(false)
+      });
+    }
   }
-}
 
-eliminarCita(id: number) {
-  if (confirm('¿Eliminar definitivamente este registro del historial?')) {
-    this.apiService.cancelarCita(id).subscribe({
-      next: () => this.loadCitas(),
-      error: () => alert('Error al eliminar.')
-    });
+  eliminarCita(id: number) {
+    if (confirm('¿Eliminar definitivamente este registro del historial?')) {
+      this.isLoading.set(true);
+      this.apiService.cancelarCita(id).subscribe({
+        next: () => this.loadCitas(),
+        error: () => this.isLoading.set(false)
+      });
+    }
   }
-}
 }

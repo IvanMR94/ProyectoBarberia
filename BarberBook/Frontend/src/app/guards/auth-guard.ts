@@ -1,20 +1,25 @@
 import { inject } from '@angular/core';
 import { Router, CanActivateFn } from '@angular/router';
-import { ApiService } from '../services/api';
 
 export const authGuard: CanActivateFn = (route, state) => {
   const router = inject(Router);
-  const apiService = inject(ApiService);
   
   const token = localStorage.getItem('token');
-
-  // Si existe token, permitimos el paso
-  if (token) {
-    return true;
+  const rol = localStorage.getItem('rol');
+  
+  // 1. Verificar si está logueado
+  if (!token) {
+    router.navigate(['/login']);
+    return false;
   }
 
-  // Si no hay token, redirigimos al login
-  // Guardamos la URL a la que intentaba acceder para redirigirlo después del login 
-  router.navigate(['/login']);
-  return false;
+  // 2. Verificar el rol si la ruta lo requiere
+  const expectedRole = route.data?.['role'];
+  if (expectedRole && rol !== expectedRole) {
+    // Si el rol no coincide, redirigir al inicio o a su dashboard correspondiente
+    router.navigate([rol === 'BARBERO' ? '/barber-dashboard' : '/my-appointments']);
+    return false;
+  }
+
+  return true;
 };

@@ -24,14 +24,21 @@ export class ApiService {
     barberDashboard: `${this.baseUrl}/barber-dashboard/`,
   };
 
-  private authStatus = new BehaviorSubject<boolean>(!!localStorage.getItem('token'));
+  private authStatus = new BehaviorSubject<boolean>(!!localStorage.getItem('access'));
   authStatus$ = this.authStatus.asObservable();
 
   updateAuthStatus() {
-    this.authStatus.next(!!localStorage.getItem('token'));
+    this.authStatus.next(!!localStorage.getItem('access'));
   }
 
-  // --- MÉTODOS (Ya no necesitan getHeaders, el Interceptor lo hace) ---
+  // --- MÉTODO CRUCIAL PARA ARREGLAR EL BOTÓN "SALIR" ---
+  logout() {
+    localStorage.removeItem('access');
+    this.updateAuthStatus();
+    // Forzamos la navegación al login después de limpiar
+    window.location.href = '/login'; 
+  }
+
   login(credentials: any): Observable<any> {
     return this.http.post(this.ENDPOINTS.login, credentials);
   }

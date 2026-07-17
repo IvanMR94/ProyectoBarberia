@@ -4,19 +4,22 @@ from .models import Cita, Barbero
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
+        # Ejecutamos la validación base (comprueba usuario y password)
         data = super().validate(attrs)
+        
+        # Obtenemos el usuario autenticado
         user = self.user
         
-        # Validación: Buscamos si el usuario actual existe en la tabla Barbero
-        # Usamos filter(usuario_id=user.id) para asegurar que buscamos por ID
-        try:
+        # FORZAMOS la asignación del rol
+        # Si el rol del modelo User es BARBERO, mandamos BARBERO
+        if user.rol == 'BARBERO':
+            data['rol'] = 'BARBERO'
+        else:
+            # Si no, verificamos si existe en la tabla Barbero
             es_barbero = Barbero.objects.filter(usuario_id=user.id).exists()
             data['rol'] = 'BARBERO' if es_barbero else 'CLIENTE'
-        except Exception as e:
-            # Si hay un error en la BD, por seguridad devolvemos CLIENTE
-            data['rol'] = 'CLIENTE'
-            print(f"Error en la validación del rol: {e}")
             
+        print(f"DEBUG: Login exitoso para {user.username}. Rol enviado: {data['rol']}")
         return data
 
 class CitaSerializer(serializers.ModelSerializer):

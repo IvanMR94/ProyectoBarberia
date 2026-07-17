@@ -1,29 +1,59 @@
-<section class="max-w-2xl mx-auto p-6">
-  <h2 class="text-2xl font-bold text-blue-900 mb-6">Mis Próximas Citas</h2>
+<section class="max-w-4xl mx-auto p-6">
+  <div class="flex items-center justify-between mb-8">
+    <h2 class="text-3xl font-extrabold text-blue-950">Mis Citas</h2>
+    <button (click)="loadCitas()" 
+            [disabled]="isLoading()"
+            class="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors">
+      {{ isLoading() ? 'Actualizando...' : '↻ Refrescar' }}
+    </button>
+  </div>
   
   <div class="space-y-4">
-   @for (cita of citas(); track cita.id) {
-  <div class="bg-white p-5 rounded-2xl border border-sky-100 shadow-sm flex justify-between items-center">
-    <div>
-      <p class="font-bold text-blue-800">{{ cita.fecha_hora_inicio | date:'dd/MM/yyyy HH:mm' }}</p>
-      <p class="text-sm">Estado: <span class="font-bold text-blue-600">{{ cita.estado }}</span></p>
-    </div>
-    
-    <div class="flex gap-2">
-      @if (cita.estado === 'PENDIENTE') {
-        <button (click)="cancelarCita(cita.id)" class="px-3 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-200">
-          Cancelar
-        </button>
+    @if (isLoading() && citas().length === 0) {
+      <div class="text-center py-20">
+        <div class="w-10 h-10 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
+      </div>
+    } @else {
+      @for (cita of citas(); track cita.id) {
+        <div class="bg-white p-6 rounded-2xl border border-blue-50 shadow-sm flex justify-between items-center hover:border-blue-200 transition-all">
+          <div>
+            <p class="text-xl font-bold text-blue-950 tracking-tight">
+              {{ cita.fecha_hora_inicio | date:'dd/MM/yyyy HH:mm':'UTC' }}
+            </p>
+            <div class="mt-2">
+              <span class="px-3 py-1 text-xs font-semibold rounded-full border"
+                    [ngClass]="{
+                      'bg-green-50 text-green-700 border-green-200': cita.estado === 'COMPLETADA',
+                      'bg-sky-50 text-sky-700 border-sky-200': cita.estado === 'PENDIENTE',
+                      'bg-slate-100 text-slate-600 border-slate-200': cita.estado === 'CANCELADA'
+                    }">
+                {{ cita.estado }}
+              </span>
+            </div>
+          </div>
+          
+          <div class="flex gap-2">
+            @if (cita.estado === 'PENDIENTE') {
+              <button (click)="cancelarCita(cita.id)" 
+                      [disabled]="isLoading()"
+                      class="px-5 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-semibold hover:bg-amber-100 transition-all disabled:opacity-50">
+                Cancelar
+              </button>
+            }
+            @if (cita.estado === 'CANCELADA' || cita.estado === 'COMPLETADA') {
+              <button (click)="eliminarCita(cita.id)" 
+                      [disabled]="isLoading()"
+                      class="px-5 py-2.5 bg-red-50 text-red-700 border border-red-200 rounded-xl font-semibold hover:bg-red-100 transition-all disabled:opacity-50">
+                Eliminar
+              </button>
+            }
+          </div>
+        </div>
+      } @empty {
+        <div class="text-center py-16 bg-blue-50 rounded-2xl border-2 border-dashed border-blue-200">
+          <p class="text-blue-600 font-medium">No tienes citas registradas.</p>
+        </div>
       }
-      @if (cita.estado === 'CANCELADA') {
-        <button (click)="eliminarCita(cita.id)" class="px-3 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-bold hover:bg-red-200">
-          Eliminar
-        </button>
-      }
-    </div>
-  </div>
-} @empty {
-  <p class="text-center text-slate-400">No tienes citas registradas.</p>
-}
+    }
   </div>
 </section>
