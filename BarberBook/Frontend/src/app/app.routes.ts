@@ -6,11 +6,11 @@ export const routes: Routes = [
   { path: '', redirectTo: 'barbers', pathMatch: 'full' },
   { 
     path: 'barbers', 
-    loadComponent: () => import('../app/barber-list/barber-list').then(m => m.BarberListComponent) 
+    loadComponent: () => import('./barber-list/barber-list').then(m => m.BarberListComponent) 
   },
   { 
     path: 'login', 
-    loadComponent: () => import('../app/login/login').then(m => m.LoginComponent) 
+    loadComponent: () => import('./login/login').then(m => m.LoginComponent) 
   },
   { 
     path: 'register', 
@@ -18,7 +18,7 @@ export const routes: Routes = [
   },
   { 
     path: 'my-appointments', 
-    loadComponent: () => import('../app/my-appointments/my-appointments').then(m => m.MyAppointmentsComponent),
+    loadComponent: () => import('./my-appointments/my-appointments').then(m => m.MyAppointmentsComponent),
     canActivate: [authGuard],
     data: { role: 'CLIENTE' }
   },

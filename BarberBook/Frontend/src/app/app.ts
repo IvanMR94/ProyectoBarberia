@@ -9,5 +9,4 @@ import { NavbarComponent } from './navbar/navbar';
   templateUrl: './app.html',
 })
 export class App {
-  title = 'BarberBook';
 }

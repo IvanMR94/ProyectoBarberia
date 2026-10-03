@@ -1,17 +1,15 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ApiService } from '../services/api';
-import { CommonModule } from '@angular/common'; // Importante
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, CommonModule],
+  imports: [RouterLink, RouterLinkActive],
   templateUrl: './navbar.html'
 })
 export class NavbarComponent implements OnInit {
   private api = inject(ApiService);
-  private router = inject(Router);
   
   // Usamos señales para que la UI reaccione instantáneamente
   isLoggedIn = signal(false);
