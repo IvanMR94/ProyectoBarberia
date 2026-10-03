@@ -19,7 +19,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             es_barbero = Barbero.objects.filter(usuario_id=user.id).exists()
             data['rol'] = 'BARBERO' if es_barbero else 'CLIENTE'
             
-        print(f"DEBUG: Login exitoso para {user.username}. Rol enviado: {data['rol']}")
         return data
 
 class CitaSerializer(serializers.ModelSerializer):
