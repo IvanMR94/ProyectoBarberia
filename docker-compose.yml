@@ -4,7 +4,7 @@ services:
     container_name: barberbook_db
     environment:
       MYSQL_DATABASE: barberbook
-      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-cambiar_en_produccion}
     ports:
       - "3307:3306"
 
