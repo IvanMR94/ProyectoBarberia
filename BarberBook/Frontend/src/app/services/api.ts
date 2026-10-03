@@ -34,6 +34,7 @@ export class ApiService {
   // --- MÉTODO CRUCIAL PARA ARREGLAR EL BOTÓN "SALIR" ---
   logout() {
     localStorage.removeItem('access');
+    localStorage.removeItem('rol');
     this.updateAuthStatus();
     // Forzamos la navegación al login después de limpiar
     window.location.href = '/login'; 

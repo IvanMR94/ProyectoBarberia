@@ -47,7 +47,7 @@ export class BarberListComponent implements OnInit {
 
   reservarCita(hora: string) {
     // Verificamos si hay token antes de intentar reservar
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access');
     
     if (!token) {
       if (confirm('¡Ups! Necesitas una cuenta para reservar. ¿Quieres registrarte ahora?')) {

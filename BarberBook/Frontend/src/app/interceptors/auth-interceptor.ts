@@ -2,10 +2,12 @@ import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
+import { ApiService } from '../services/api';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
-  const token = localStorage.getItem('token');
+  const api = inject(ApiService);
+  const token = localStorage.getItem('access');
   
   let authReq = req;
   if (token) {
@@ -18,8 +20,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: HttpErrorResponse) => {
       // Si el servidor nos dice que no estamos autorizados (401)
       if (error.status === 401) {
-        localStorage.removeItem('token');
+        localStorage.removeItem('access');
         localStorage.removeItem('rol');
+        api.updateAuthStatus();
         // Redirigimos al login
         router.navigate(['/login']);
       }

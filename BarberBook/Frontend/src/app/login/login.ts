@@ -27,8 +27,9 @@ export class LoginComponent {
 
     this.api.login(this.loginForm.value).subscribe({
       next: (res) => {
-        // 1. LIMPIEZA PREVIA: Aseguramos borrar cualquier residuo anterior
-        localStorage.clear(); 
+        // 1. LIMPIEZA PREVIA: borramos solo las credenciales anteriores
+        localStorage.removeItem('access');
+        localStorage.removeItem('rol');
 
         // 2. GUARDADO
         const rol = res.rol || 'CLIENTE';
