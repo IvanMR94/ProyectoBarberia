@@ -6,7 +6,7 @@ export interface Cita {
   id: number;
   barbero: number;
   fecha_hora_inicio: string;
-  estado: 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA';
+  estado: 'PENDIENTE' | 'CONFIRMADA' | 'COMPLETADA' | 'CANCELADA';
   cliente: number;
 }
 

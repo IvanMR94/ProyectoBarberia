@@ -19,9 +19,9 @@ export class BarberDashboardComponent implements OnInit {
     this.isLoading.set(true);
     this.api.getBarberAppointments().subscribe({
       next: (data) => {
-        // Filtramos para mantener solo las pendientes y limpiar el dashboard
-        const pendientes = data.filter(c => c.estado === 'PENDIENTE');
-        this.citas.set(pendientes);
+        // Citas activas: pendientes (a confirmar) y confirmadas (a finalizar)
+        const activas = data.filter(c => c.estado === 'PENDIENTE' || c.estado === 'CONFIRMADA');
+        this.citas.set(activas);
         this.isLoading.set(false);
       },
       error: () => this.isLoading.set(false)
@@ -30,6 +30,14 @@ export class BarberDashboardComponent implements OnInit {
 
   refreshDashboard() {
     this.loadDashboard();
+  }
+
+  confirmarCita(id: number) {
+    this.isLoading.set(true);
+    this.api.updateBarberCita(id, { estado: 'CONFIRMADA' }).subscribe({
+      next: () => this.loadDashboard(),
+      error: () => this.isLoading.set(false)
+    });
   }
 
   completarCita(id: number) {
