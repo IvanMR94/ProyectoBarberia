@@ -11,9 +11,9 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         user = self.user
         
         # FORZAMOS la asignación del rol
-        # Si el rol del modelo User es BARBERO, mandamos BARBERO
-        if user.rol == 'BARBERO':
-            data['rol'] = 'BARBERO'
+        # Los roles directos del modelo se respetan tal cual
+        if user.rol in ('BARBERO', 'SUPER_ADMIN'):
+            data['rol'] = user.rol
         else:
             # Si no, verificamos si existe en la tabla Barbero
             es_barbero = Barbero.objects.filter(usuario_id=user.id).exists()

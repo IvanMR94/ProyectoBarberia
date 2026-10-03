@@ -16,8 +16,12 @@ export const authGuard: CanActivateFn = (route, state) => {
   // 2. Verificar el rol si la ruta lo requiere
   const expectedRole = route.data?.['role'];
   if (expectedRole && rol !== expectedRole) {
-    // Si el rol no coincide, redirigir al inicio o a su dashboard correspondiente
-    router.navigate([rol === 'BARBERO' ? '/barber-dashboard' : '/my-appointments']);
+    // Si el rol no coincide, redirigir a su dashboard o al inicio
+    router.navigate([
+      rol === 'BARBERO' ? '/barber-dashboard'
+      : rol === 'CLIENTE' ? '/my-appointments'
+      : '/barbers'
+    ]);
     return false;
   }
 

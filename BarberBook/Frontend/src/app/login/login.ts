@@ -42,8 +42,12 @@ export class LoginComponent {
         // 4. REDIRECCIÓN
         if (rol === 'BARBERO') {
           this.router.navigate(['/barber-dashboard']);
-        } else {
+        } else if (rol === 'CLIENTE') {
           this.router.navigate(['/my-appointments']);
+        } else {
+          // SUPER_ADMIN u otros roles: el frontend no tiene panel propio,
+          // se queda en el inicio público
+          this.router.navigate(['/barbers']);
         }
       },
       error: (err) => {
