@@ -4,7 +4,7 @@ from .models import User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'rol', 'password')
+        fields = ('id', 'username', 'email', 'nombre', 'apellido', 'rol', 'password')
         extra_kwargs = {
             'password': {'write_only': True},
             # El rol nunca se acepta desde el registro público:

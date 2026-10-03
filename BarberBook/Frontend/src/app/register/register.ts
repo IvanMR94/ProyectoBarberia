@@ -19,6 +19,8 @@ export class RegisterComponent {
     const payload = {
       username: this.user.email, 
       email: this.user.email,
+      nombre: this.user.nombre,
+      apellido: this.user.apellido,
       password: this.user.password,
       rol: 'CLIENTE' 
     };
