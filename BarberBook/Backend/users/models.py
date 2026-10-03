@@ -8,12 +8,9 @@ class User(AbstractUser):
         ('CLIENTE', 'Cliente'),
     )
     
-    tenant_id = models.IntegerField(null=True, blank=True)
     nombre = models.CharField(max_length=100, blank=True, default='')
     apellido = models.CharField(max_length=100, blank=True, default='')
     rol = models.CharField(max_length=20, choices=ROLE_CHOICES, default='CLIENTE')
-    activo = models.BooleanField(default=True)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.username} - {self.rol}"

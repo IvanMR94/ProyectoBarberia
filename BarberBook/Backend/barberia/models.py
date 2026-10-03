@@ -1,6 +1,5 @@
 from django.db import models
 from django.conf import settings
-from django.utils import timezone
 
 class Barbero(models.Model):
     nombre = models.CharField(max_length=100)
@@ -25,7 +24,6 @@ class Cita(models.Model):
     cliente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     fecha_hora_inicio = models.DateTimeField()
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default=ESTADO_PENDIENTE)
-    fecha_creacion = models.DateTimeField(default=timezone.now)
 
     class Meta:
         constraints = [
