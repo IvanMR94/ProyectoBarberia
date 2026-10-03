@@ -4,6 +4,7 @@ from django.utils import timezone
 
 class Barbero(models.Model):
     nombre = models.CharField(max_length=100)
+    apellido = models.CharField(max_length=100, default='')
     # Relación OneToOne correcta con el modelo de usuario de Django
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='perfil_barbero')
 

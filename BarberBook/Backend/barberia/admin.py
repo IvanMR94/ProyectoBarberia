@@ -6,7 +6,7 @@ User = get_user_model()
 
 @admin.register(Barbero)
 class BarberoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'usuario')
+    list_display = ('nombre', 'apellido', 'usuario')
     search_fields = ('nombre', 'usuario__username', 'usuario__email')
 
     
