@@ -12,9 +12,6 @@ from .serializers import CitaSerializer, CitaUpdateSerializer, BarberoSerializer
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
-    def get_serializer_class(self):
-        return MyTokenObtainPairSerializer
-
 # --- Vistas existentes ---
 class BarberoListView(generics.ListAPIView):
     queryset = Barbero.objects.all()

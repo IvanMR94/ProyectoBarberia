@@ -1,18 +1,12 @@
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework_simplejwt.views import TokenRefreshView
-from barberia.views import CustomTokenObtainPairView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    
+
     # Rutas de usuarios (registro, perfil, etc.)
     path('api/v1/auth/', include('users.urls')),
-    
-    # Rutas de autenticación JWT (Usando TU vista personalizada)
-    path('api/v1/auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/v1/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    
-    # Rutas de tu app de barbería
+
+    # Rutas de tu app de barbería (incluye login/refresh JWT)
     path('api/v1/', include('barberia.urls')),
 ]

@@ -136,7 +136,6 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-# settings.py
 AUTH_USER_MODEL = 'users.User'
 
 REST_FRAMEWORK = {
@@ -148,7 +147,6 @@ REST_FRAMEWORK = {
     ),
 }
 
-# Añade esto debajo de REST_FRAMEWORK
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
