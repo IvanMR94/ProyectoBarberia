@@ -28,4 +28,6 @@ export const routes: Routes = [
     canActivate: [authGuard],
     data: { role: 'BARBERO' }
   },
+  // Cualquier ruta desconocida vuelve al inicio
+  { path: '**', redirectTo: 'barbers' },
 ];
