@@ -52,7 +52,11 @@ export class LoginComponent {
       },
       error: (err) => {
         console.error('Error de login:', err);
-        alert('Credenciales inválidas, intenta nuevamente.');
+        if (err.status === 429) {
+          alert('Demasiados intentos fallidos. Esperá un minuto y probá de nuevo.');
+        } else {
+          alert('Credenciales inválidas, intenta nuevamente.');
+        }
       }
     });
   }
