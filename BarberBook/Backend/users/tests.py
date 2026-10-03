@@ -36,6 +36,25 @@ class RegistroTests(TestCase):
         user = User.objects.get(username='tramposo@mail.com')
         self.assertEqual(user.rol, 'CLIENTE')
 
+    def test_registro_rechaza_username_con_caracteres_invalidos(self):
+        r = self.client.post('/api/v1/auth/register/', {
+            'username': '<script>alert(1)</script>',
+            'email': 'xss@mail.com',
+            'password': 'secreto123',
+        }, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertFalse(User.objects.filter(
+            username='<script>alert(1)</script>').exists())
+
+    def test_registro_rechaza_password_corto(self):
+        r = self.client.post('/api/v1/auth/register/', {
+            'username': 'corto@mail.com',
+            'email': 'corto@mail.com',
+            'password': 'abc',
+        }, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertFalse(User.objects.filter(username='corto@mail.com').exists())
+
 
 class LoginRolTests(TestCase):
     def setUp(self):
@@ -84,3 +103,32 @@ class RefreshTokenTests(TestCase):
         r2 = self.client.post(
             '/api/v1/auth/refresh/', {'refresh': self.refresh}, format='json')
         self.assertEqual(r2.status_code, 401)
+
+
+class LoginRateLimitTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_bloquea_tras_10_intentos_sobre_la_misma_cuenta(self):
+        datos = {'username': 'bloqueo@mail.com', 'password': 'incorrecta123'}
+
+        for _ in range(10):
+            r = self.client.post('/api/v1/auth/login/', datos, format='json')
+            self.assertNotEqual(r.status_code, 429)
+
+        r = self.client.post('/api/v1/auth/login/', datos, format='json')
+        self.assertEqual(r.status_code, 429)
+
+    def test_ataque_por_cuenta_no_bloquea_a_otra_cuenta(self):
+        for _ in range(11):
+            self.client.post(
+                '/api/v1/auth/login/',
+                {'username': 'ataque@mail.com', 'password': 'mala'},
+                format='json')
+
+        User.objects.create_user(
+            username='tranquilo@mail.com', password='buena1234')
+        r = self.client.post('/api/v1/auth/login/', {
+            'username': 'tranquilo@mail.com', 'password': 'buena1234',
+        }, format='json')
+        self.assertEqual(r.status_code, 200)

@@ -23,7 +23,9 @@ if _env_file.exists():
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or secrets.token_urlsafe(50)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+# Seguro por defecto: DEBUG solo si el entorno lo activa explícitamente
+# (el .env de desarrollo pone DJANGO_DEBUG=True; producción va sin .env).
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -145,6 +147,12 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_THROTTLE_RATES': {
+        # IP generosa: varias personas de una sucursal comparten IP pública.
+        # Cuenta estricta: frena fuerza bruta dirigida aunque venga de muchas IPs.
+        'login_ip': '60/min',
+        'login_usuario': '10/min',
+    },
 }
 
 SIMPLE_JWT = {

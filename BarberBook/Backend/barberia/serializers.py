@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.utils import timezone
 from .models import Cita, Barbero
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -27,6 +28,13 @@ class CitaSerializer(serializers.ModelSerializer):
         fields = ['id', 'barbero', 'fecha_hora_inicio', 'estado', 'cliente']
         read_only_fields = ['estado', 'cliente'] 
 
+    def validate_fecha_hora_inicio(self, value):
+        # No se pueden reservar citas en el pasado
+        if value < timezone.now():
+            raise serializers.ValidationError(
+                'No se pueden reservar citas en el pasado.')
+        return value
+
 # Ciclo de vida de una cita (según roadmap): PENDIENTE -> CONFIRMADA -> COMPLETADA
 # y cancelación desde PENDIENTE o CONFIRMADA. Los estados terminales no cambian.
 TRANSICIONES_ESTADO = {
@@ -52,6 +60,17 @@ class CitaUpdateSerializer(serializers.ModelSerializer):
                 f'Ciclo de vida inválido: {actual} → {nuevo_estado}.'
             )
         return nuevo_estado
+
+
+class CitaClienteUpdateSerializer(CitaUpdateSerializer):
+    """El cliente solo puede cancelar: confirmar y completar son del barbero."""
+
+    def validate_estado(self, nuevo_estado):
+        if (self.instance and nuevo_estado != self.instance.estado
+                and nuevo_estado != 'CANCELADA'):
+            raise serializers.ValidationError(
+                'Desde tu cuenta solo podés cancelar la cita.')
+        return super().validate_estado(nuevo_estado)
 
 class BarberoSerializer(serializers.ModelSerializer):
     class Meta:
