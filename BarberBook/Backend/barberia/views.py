@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, generics, permissions
 from datetime import datetime
+from django.db import IntegrityError, transaction
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .services import get_disponibilidad_barbero
 from .models import Cita, Barbero
@@ -38,6 +39,18 @@ class CitaCreateView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     def perform_create(self, serializer):
         serializer.save(cliente=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        # Si otro usuario reservó el mismo hueco (unique barbero+fecha),
+        # devolvemos 409 en vez de un 500 por IntegrityError.
+        try:
+            with transaction.atomic():
+                return super().create(request, *args, **kwargs)
+        except IntegrityError:
+            return Response(
+                {'error': 'Ese horario ya está reservado para este barbero.'},
+                status=status.HTTP_409_CONFLICT,
+            )
 
 class CitaManageView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Cita.objects.all()
