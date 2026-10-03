@@ -1,19 +1,39 @@
 services:
   db:
-    image: mysql:8.0
+    image: mysql:8.4
     container_name: barberbook_db
     environment:
       MYSQL_DATABASE: barberbook
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-cambiar_en_produccion}
+      MYSQL_USER: barberbook
+      MYSQL_PASSWORD: ${DB_PASSWORD:-barberbook_dev}
     ports:
       - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
   backend:
     build: ./BarberBook/Backend 
     container_name: barberbook_api
+    environment:
+      DB_ENGINE: django.db.backends.mysql
+      DB_NAME: barberbook
+      DB_USER: barberbook
+      DB_PASSWORD: ${DB_PASSWORD:-barberbook_dev}
+      DB_HOST: db
+      DB_PORT: "3306"
     volumes:
       - ./BarberBook/Backend:/app 
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
