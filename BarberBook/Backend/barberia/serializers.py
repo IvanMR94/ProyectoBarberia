@@ -27,12 +27,33 @@ class CitaSerializer(serializers.ModelSerializer):
         fields = ['id', 'barbero', 'fecha_hora_inicio', 'estado', 'cliente']
         read_only_fields = ['estado', 'cliente'] 
 
+# Ciclo de vida de una cita (según roadmap): PENDIENTE -> CONFIRMADA -> COMPLETADA
+# y cancelación desde PENDIENTE o CONFIRMADA. Los estados terminales no cambian.
+TRANSICIONES_ESTADO = {
+    'PENDIENTE': {'CONFIRMADA', 'CANCELADA'},
+    'CONFIRMADA': {'COMPLETADA', 'CANCELADA'},
+    'COMPLETADA': set(),
+    'CANCELADA': set(),
+}
+
 class CitaUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cita
         fields = ['estado']
 
+    def validate_estado(self, nuevo_estado):
+        if not self.instance:
+            return nuevo_estado
+        actual = self.instance.estado
+        if nuevo_estado == actual:
+            return nuevo_estado
+        if nuevo_estado not in TRANSICIONES_ESTADO.get(actual, set()):
+            raise serializers.ValidationError(
+                f'Ciclo de vida inválido: {actual} → {nuevo_estado}.'
+            )
+        return nuevo_estado
+
 class BarberoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Barbero
-        fields = ['id', 'nombre']
+        fields = ['id', 'nombre', 'apellido']
