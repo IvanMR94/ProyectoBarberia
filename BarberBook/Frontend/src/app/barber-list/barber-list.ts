@@ -32,11 +32,19 @@ export class BarberListComponent implements OnInit {
     this.selectedBarber.set(barber);
     this.isModalOpen.set(true);
     
-    const hoy = new Date().toISOString().split('T')[0]; 
-    this.apiService.getAvailability(barber.id, hoy).subscribe({
+    this.apiService.getAvailability(barber.id, this.hoyLocal()).subscribe({
       next: (res: any) => this.disponibilidad.set(res.disponibles),
       error: (err) => console.error('Error cargando disponibilidad:', err)
     });
+  }
+
+  // Fecha local (no UTC) para que a la noche no se "adelante" el día
+  private hoyLocal(): string {
+    const d = new Date();
+    const anio = d.getFullYear();
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${anio}-${mes}-${dia}`;
   }
 
   closeModal() {
@@ -56,7 +64,7 @@ export class BarberListComponent implements OnInit {
       return;
     }
 
-    const fechaHoy = new Date().toISOString().split('T')[0];
+    const fechaHoy = this.hoyLocal();
     const payload = {
       barbero: this.selectedBarber()?.id,
       fecha_hora_inicio: `${fechaHoy}T${hora}:00`,
