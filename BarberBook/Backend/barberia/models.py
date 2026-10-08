@@ -21,6 +21,9 @@ class Barbero(models.Model):
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='perfil_barbero')
     activo = models.BooleanField(default=True)
     nota_pausa = models.CharField(max_length=200, blank=True, default='')
+    # Despido desde el panel del dueño: se oculta del panel y del público,
+    # pero conserva sus citas históricas y puede ser recontratado
+    despedido = models.BooleanField(default=False)
     servicios = models.ManyToManyField(
         Servicio, related_name='barberos', blank=True)
 

@@ -30,7 +30,7 @@ class BarberoDuenoSerializer(serializers.ModelSerializer):
         model = Barbero
         fields = [
             'id', 'nombre', 'apellido', 'email', 'activo', 'nota_pausa',
-            'servicios', 'cortes', 'ingresos',
+            'despedido', 'servicios', 'cortes', 'ingresos',
         ]
 
     def get_cortes(self, obj):

@@ -157,7 +157,7 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      @for (b of barberos(); track b.id) {
+      @for (b of barberosActivos(); track b.id) {
         <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
           <div class="flex justify-between items-start gap-3">
             <div class="min-w-0">
@@ -228,6 +228,11 @@
                 Reactivar
               </button>
             }
+            <button
+              (click)="despedirBarbero(b)"
+              class="px-4 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-sm font-semibold hover:bg-rose-100 transition-colors active:scale-95">
+              Despedir
+            </button>
           </div>
         </div>
       } @empty {
@@ -242,6 +247,27 @@
         </div>
       }
     </div>
+
+    @if (barberosDespedidos().length > 0) {
+      <div class="mt-8">
+        <h3 class="text-sm font-semibold text-slate-500 mb-3">Ex-barberos</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          @for (b of barberosDespedidos(); track b.id) {
+            <div class="bg-slate-50 rounded-2xl border border-slate-200 p-4 flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <p class="font-semibold text-slate-600 truncate">{{ nombreCompleto(b.nombre, b.apellido) }}</p>
+                <p class="text-sm text-slate-400 truncate">{{ b.email }}</p>
+              </div>
+              <button
+                (click)="recontratarBarbero(b)"
+                class="shrink-0 px-4 py-2 bg-white text-blue-700 border border-blue-200 rounded-xl text-sm font-semibold hover:bg-blue-50 transition-colors active:scale-95">
+                Recontratar
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    }
   }
 
   <!-- ======================= CLIENTES ======================= -->

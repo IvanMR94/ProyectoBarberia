@@ -25,6 +25,8 @@ urlpatterns = [
     path('owner/stats/', views_dueno.OwnerStatsView.as_view()),
     path('owner/barbers/', views_dueno.OwnerBarberosView.as_view()),
     path('owner/barbers/<int:pk>/', views_dueno.OwnerBarberoDetailView.as_view()),
+    path('owner/barbers/<int:pk>/recontratar/',
+         views_dueno.OwnerBarberoRecontratarView.as_view()),
     path('owner/clients/', views_dueno.OwnerClientesView.as_view()),
     path('owner/appointments/', views_dueno.OwnerCitasView.as_view()),
     path('owner/services/', views_dueno.OwnerServiciosView.as_view()),

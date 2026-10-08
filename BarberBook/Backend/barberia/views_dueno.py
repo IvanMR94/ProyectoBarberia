@@ -168,6 +168,48 @@ class OwnerBarberoDetailView(APIView):
         serializer.save()
         return Response(BarberoDuenoSerializer(barbero).data)
 
+    def delete(self, request, pk):
+        barbero = self._get(pk)
+        if not barbero or barbero.despedido:
+            return Response(
+                {'error': 'Barbero no encontrado.'},
+                status=status.HTTP_404_NOT_FOUND)
+        ahora = timezone.now()
+        citas_canceladas = Cita.objects.filter(
+            barbero=barbero,
+            estado__in=[Cita.ESTADO_PENDIENTE, Cita.ESTADO_CONFIRMADA],
+            fecha_hora_inicio__gte=ahora,
+        ).update(estado=Cita.ESTADO_CANCELADA)
+        barbero.despedido = True
+        barbero.activo = False
+        barbero.nota_pausa = ''
+        barbero.usuario.is_active = False
+        barbero.usuario.save(update_fields=['is_active'])
+        barbero.save(
+            update_fields=['despedido', 'activo', 'nota_pausa'])
+        return Response({
+            'mensaje': f'{barbero.nombre} fue despedido del equipo.',
+            'citas_canceladas': citas_canceladas,
+        })
+
+
+class OwnerBarberoRecontratarView(APIView):
+    permission_classes = [IsAuthenticated, EsDueno]
+
+    def post(self, request, pk):
+        barbero = Barbero.objects.select_related('usuario').filter(
+            pk=pk).first()
+        if not barbero or not barbero.despedido:
+            return Response(
+                {'error': 'Barbero no encontrado.'},
+                status=status.HTTP_404_NOT_FOUND)
+        barbero.despedido = False
+        barbero.activo = True
+        barbero.usuario.is_active = True
+        barbero.usuario.save(update_fields=['is_active'])
+        barbero.save(update_fields=['despedido', 'activo'])
+        return Response(BarberoDuenoSerializer(barbero).data)
+
 
 class OwnerClientesView(APIView):
     permission_classes = [IsAuthenticated, EsDueno]

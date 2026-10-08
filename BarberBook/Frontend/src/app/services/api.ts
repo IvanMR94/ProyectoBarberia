@@ -122,6 +122,15 @@ export class ApiService {
     return this.http.patch(`${this.ENDPOINTS.owner}/barbers/${id}/`, data);
   }
 
+  deleteOwnerBarber(id: number): Observable<any> {
+    return this.http.delete(`${this.ENDPOINTS.owner}/barbers/${id}/`);
+  }
+
+  recontratarOwnerBarber(id: number): Observable<any> {
+    return this.http.post(
+      `${this.ENDPOINTS.owner}/barbers/${id}/recontratar/`, {});
+  }
+
   getOwnerClients(q: string = ''): Observable<any> {
     return this.http.get(`${this.ENDPOINTS.owner}/clients/`, {
       params: q ? { q } : {},

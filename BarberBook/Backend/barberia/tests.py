@@ -474,6 +474,131 @@ class PausaBarberoTests(BaseApiTest):
         self.assertEqual(barbero['nota_pausa'], 'Sanción')
 
 
+class DespidoBarberoTests(BaseApiTest):
+    def setUp(self):
+        super().setUp()
+        self.dueno = User.objects.create_user(
+            username='dueno_despido', password='dueno12345', rol=ROL_DUENO)
+        self.client.force_authenticate(self.dueno)
+
+    def test_despedir_cancela_las_citas_futuras(self):
+        pendiente = self.crear_cita(hora=10, estado='PENDIENTE')
+        confirmada = self.crear_cita(hora=11, estado='CONFIRMADA')
+
+        r = self.client.delete(
+            f'/api/v1/owner/barbers/{self.barbero.id}/')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data['citas_canceladas'], 2)
+
+        pendiente.refresh_from_db()
+        confirmada.refresh_from_db()
+        self.assertEqual(pendiente.estado, 'CANCELADA')
+        self.assertEqual(confirmada.estado, 'CANCELADA')
+
+        self.barbero.refresh_from_db()
+        self.assertTrue(self.barbero.despedido)
+        self.assertFalse(self.barbero.activo)
+        self.barbero_user.refresh_from_db()
+        self.assertFalse(self.barbero_user.is_active)
+
+    def test_despido_conserva_el_historial(self):
+        pasada = self.crear_cita(
+            hora=9, estado='COMPLETADA',
+            fecha=timezone.localtime().date() - timedelta(days=1))
+
+        self.client.delete(f'/api/v1/owner/barbers/{self.barbero.id}/')
+
+        pasada.refresh_from_db()
+        self.assertEqual(pasada.estado, 'COMPLETADA')
+
+    def test_despido_conserva_stats_del_periodo(self):
+        self.crear_cita(hora=10, estado='COMPLETADA')
+        self.client.delete(f'/api/v1/owner/barbers/{self.barbero.id}/')
+
+        r = self.client.get(
+            f'/api/v1/owner/stats/?desde={self.fecha_futura}&'
+            f'hasta={self.fecha_futura}')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data['cortes'], 1)
+        self.assertEqual(r.data['por_barbero'][0]['nombre'], 'Omar Rios')
+
+    def test_barbero_despedido_desaparece_de_la_lista_publica(self):
+        self.client.delete(f'/api/v1/owner/barbers/{self.barbero.id}/')
+        self.client.force_authenticate(user=None)
+
+        r = self.client.get('/api/v1/barbers/')
+        nombres = [b['nombre'] for b in r.data]
+        self.assertNotIn('Omar', nombres)
+
+        r2 = self.client.get(
+            f'/api/v1/barbers/{self.barbero.id}/availability/'
+            f'?date={self.fecha_futura}')
+        self.assertEqual(r2.status_code, 400)
+
+    def test_barbero_despedido_no_puede_loguearse(self):
+        self.client.delete(f'/api/v1/owner/barbers/{self.barbero.id}/')
+        self.client.force_authenticate(user=None)
+
+        r = self.client.post('/api/v1/auth/login/', {
+            'username': 'barbero_test', 'password': 'barbero123'})
+        self.assertEqual(r.status_code, 401)
+
+    def test_listado_del_dueno_lo_marca_como_despedido(self):
+        self.client.delete(f'/api/v1/owner/barbers/{self.barbero.id}/')
+        r = self.client.get('/api/v1/owner/barbers/')
+        barbero = r.data['barberos'][0]
+        self.assertTrue(barbero['despedido'])
+        self.assertFalse(barbero['activo'])
+
+    def test_recontratar_restaura_todo(self):
+        self.client.delete(f'/api/v1/owner/barbers/{self.barbero.id}/')
+
+        r = self.client.post(
+            f'/api/v1/owner/barbers/{self.barbero.id}/recontratar/')
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(r.data['despedido'])
+        self.assertTrue(r.data['activo'])
+
+        self.barbero.refresh_from_db()
+        self.barbero_user.refresh_from_db()
+        self.assertTrue(self.barbero_user.is_active)
+
+        self.client.force_authenticate(user=None)
+        nombres = [
+            b['nombre'] for b in self.client.get('/api/v1/barbers/').data]
+        self.assertIn('Omar', nombres)
+        r2 = self.client.post('/api/v1/auth/login/', {
+            'username': 'barbero_test', 'password': 'barbero123'})
+        self.assertEqual(r2.status_code, 200)
+
+    def test_despedir_dos_veces_devuelve_404(self):
+        r = self.client.delete(
+            f'/api/v1/owner/barbers/{self.barbero.id}/')
+        self.assertEqual(r.status_code, 200)
+
+        r2 = self.client.delete(
+            f'/api/v1/owner/barbers/{self.barbero.id}/')
+        self.assertEqual(r2.status_code, 404)
+
+    def test_despedir_barbero_inexistente_devuelve_404(self):
+        r = self.client.delete('/api/v1/owner/barbers/9999/')
+        self.assertEqual(r.status_code, 404)
+
+    def test_recontratar_un_barbero_activo_devuelve_404(self):
+        r = self.client.post(
+            f'/api/v1/owner/barbers/{self.barbero.id}/recontratar/')
+        self.assertEqual(r.status_code, 404)
+
+    def test_cliente_no_puede_despedir(self):
+        self.client.force_authenticate(self.cliente)
+        r = self.client.delete(
+            f'/api/v1/owner/barbers/{self.barbero.id}/')
+        self.assertEqual(r.status_code, 403)
+
+        self.barbero.refresh_from_db()
+        self.assertFalse(self.barbero.despedido)
+
+
 class ServicioReservaTests(BaseApiTest):
     def test_no_se_puede_reservar_sin_servicio(self):
         self.client.force_authenticate(self.cliente)

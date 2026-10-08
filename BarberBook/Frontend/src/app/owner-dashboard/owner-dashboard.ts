@@ -12,6 +12,7 @@ interface BarberoPanel {
   email: string;
   activo: boolean;
   nota_pausa: string;
+  despedido: boolean;
   servicios: Servicio[];
   cortes: number;
   ingresos: string;
@@ -68,6 +69,12 @@ export class OwnerDashboardComponent implements OnInit {
       { label: 'Clientes nuevos', valor: String(s.clientes_nuevos) },
     ];
   });
+
+  barberosActivos = computed(() =>
+    this.barberos().filter((b) => !b.despedido));
+
+  barberosDespedidos = computed(() =>
+    this.barberos().filter((b) => b.despedido));
 
   ngOnInit() {
     this.cargarTodo();
@@ -219,6 +226,45 @@ export class OwnerDashboardComponent implements OnInit {
     this.api.updateOwnerBarber(b.id, { activo: true }).subscribe({
       next: () => this.cargarBarberos(),
       error: (err) => console.error('Error reactivando barbero:', err),
+    });
+  }
+
+  despedirBarbero(b: BarberoPanel) {
+    const nombre = this.nombreCompleto(b.nombre, b.apellido);
+    const ok = confirm(
+      `¿Despedir a ${nombre}?\n\nSe cancelarán sus citas futuras, `
+      + 'dejará de estar disponible para reservas y no podrá ingresar. '
+      + 'Podrás recontratarlo más adelante.');
+    if (!ok) return;
+    this.api.deleteOwnerBarber(b.id).subscribe({
+      next: (r) => {
+        const aviso = r.citas_canceladas
+          ? ` Se cancelaron ${r.citas_canceladas} cita/s futura/s.`
+          : '';
+        alert(`${nombre} fue despedido del equipo.${aviso}`);
+        this.cargarBarberos();
+        this.cargarStats();
+        this.cargarCortes();
+      },
+      error: (err) => {
+        console.error('Error despidiendo barbero:', err);
+        alert('No se pudo despedir al barbero.');
+      },
+    });
+  }
+
+  recontratarBarbero(b: BarberoPanel) {
+    const nombre = this.nombreCompleto(b.nombre, b.apellido);
+    const ok = confirm(
+      `¿Recontratar a ${nombre}?\n\nVolverá a estar activo y disponible `
+      + 'para recibir reservas.');
+    if (!ok) return;
+    this.api.recontratarOwnerBarber(b.id).subscribe({
+      next: () => this.cargarBarberos(),
+      error: (err) => {
+        console.error('Error recontratando barbero:', err);
+        alert('No se pudo recontratar al barbero.');
+      },
     });
   }
 

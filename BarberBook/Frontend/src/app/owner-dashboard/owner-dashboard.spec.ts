@@ -21,6 +21,7 @@ describe('OwnerDashboardComponent', () => {
     email: 'omar@barber.com',
     activo: true,
     nota_pausa: '',
+    despedido: false,
     servicios: [servicioFixture],
     cortes: 3,
     ingresos: '3000',
@@ -165,6 +166,70 @@ describe('OwnerDashboardComponent', () => {
     vi.spyOn(window, 'prompt').mockReturnValue(null);
     component.pausarBarbero(component.barberos()[0]);
     httpMock.expectNone((r) => r.url.includes('/owner/barbers/2/'));
+    vi.restoreAllMocks();
+  });
+
+  it('despide un barbero con DELETE y recarga el panel', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+    component.despedirBarbero(component.barberos()[0]);
+
+    const req = httpMock.expectOne(`${baseUrl}/owner/barbers/2/`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush({
+      mensaje: 'Omar fue despedido del equipo.',
+      citas_canceladas: 2,
+    });
+
+    httpMock.expectOne((r) => r.url.startsWith(`${baseUrl}/owner/stats/`)).flush({
+      desde: '2026-10-01', hasta: '2026-10-31',
+      cortes: 0, ingresos: '0', clientes_atendidos: 0, clientes_nuevos: 0,
+      por_barbero: [], por_servicio: [],
+    });
+    httpMock.expectOne((r) => r.url.startsWith(`${baseUrl}/owner/barbers/`)).flush({
+      desde: '2026-10-01', hasta: '2026-10-31',
+      barberos: [{ ...barberoFixture, despedido: true, activo: false }],
+    });
+    httpMock.expectOne((r) => r.url.startsWith(`${baseUrl}/owner/appointments/`))
+      .flush({ cortes: [] });
+
+    expect(component.barberosActivos().length).toBe(0);
+    expect(component.barberosDespedidos().length).toBe(1);
+    vi.restoreAllMocks();
+  });
+
+  it('cancelar el despido no envía nada', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    component.despedirBarbero(component.barberos()[0]);
+    httpMock.expectNone((r) => r.method === 'DELETE');
+    vi.restoreAllMocks();
+  });
+
+  it('recontrata un ex barbero con POST', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const exBarbero = { ...barberoFixture, despedido: true, activo: false };
+
+    component.recontratarBarbero(exBarbero);
+
+    const req = httpMock.expectOne(`${baseUrl}/owner/barbers/2/recontratar/`);
+    expect(req.request.method).toBe('POST');
+    req.flush({ ...barberoFixture, despedido: false });
+
+    httpMock.expectOne((r) => r.url.startsWith(`${baseUrl}/owner/barbers/`)).flush({
+      desde: '2026-10-01', hasta: '2026-10-31', barberos: [barberoFixture],
+    });
+
+    expect(component.barberosDespedidos().length).toBe(0);
+    expect(component.barberosActivos().length).toBe(1);
+    vi.restoreAllMocks();
+  });
+
+  it('cancelar la recontratación no envía nada', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    component.recontratarBarbero({ ...barberoFixture, despedido: true });
+    httpMock.expectNone(
+      (r) => r.urlWithParams.includes('recontratar'));
     vi.restoreAllMocks();
   });
 
