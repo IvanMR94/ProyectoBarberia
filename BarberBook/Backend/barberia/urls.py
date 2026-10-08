@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import views_dueno
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -19,4 +20,13 @@ urlpatterns = [
     # --- Dashboard Barbero ---
     path('barber-dashboard/', views.BarberDashboardView.as_view(), name='barber-dashboard'),
     path('barber-appointments/<int:pk>/', views.BarberCitaUpdateView.as_view(), name='barber-cita-update'),
+
+    # --- Panel del Dueño ---
+    path('owner/stats/', views_dueno.OwnerStatsView.as_view()),
+    path('owner/barbers/', views_dueno.OwnerBarberosView.as_view()),
+    path('owner/barbers/<int:pk>/', views_dueno.OwnerBarberoDetailView.as_view()),
+    path('owner/clients/', views_dueno.OwnerClientesView.as_view()),
+    path('owner/appointments/', views_dueno.OwnerCitasView.as_view()),
+    path('owner/services/', views_dueno.OwnerServiciosView.as_view()),
+    path('owner/services/<int:pk>/', views_dueno.OwnerServicioDetailView.as_view()),
 ]

@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../services/api';
+import { ROL } from '../models/roles';
 
 @Component({
   selector: 'app-login',
@@ -32,21 +33,23 @@ export class LoginComponent {
         localStorage.removeItem('rol');
 
         // 2. GUARDADO
-        const rol = res.rol || 'CLIENTE';
+        const rol = res.rol || ROL.CLIENTE;
         localStorage.setItem('access', res.access);
         localStorage.setItem('rol', rol);
+        localStorage.setItem('nombre', res.nombre || '');
         
         // 3. ACTUALIZACIÓN DEL ESTADO
         this.api.updateAuthStatus();
         
         // 4. REDIRECCIÓN
-        if (rol === 'BARBERO') {
+        if (rol === ROL.BARBERO) {
           this.router.navigate(['/barber-dashboard']);
-        } else if (rol === 'CLIENTE') {
+        } else if (rol === ROL.DUENO) {
+          this.router.navigate(['/dueno']);
+        } else if (rol === ROL.CLIENTE) {
           this.router.navigate(['/my-appointments']);
         } else {
-          // SUPER_ADMIN u otros roles: el frontend no tiene panel propio,
-          // se queda en el inicio público
+          // SUPER_ADMIN u otros roles: su lugar es el admin de Django
           this.router.navigate(['/barbers']);
         }
       },

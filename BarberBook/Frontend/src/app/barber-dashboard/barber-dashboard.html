@@ -9,49 +9,171 @@
     </button>
   </div>
   
-  <div class="space-y-4">
-    @if (isLoading() && citas().length === 0) {
-      <div class="text-center py-20">
-        <div class="w-10 h-10 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
-      </div>
-    } @else {
-      @for (cita of citas(); track cita.id) {
-        <div class="bg-white p-6 rounded-2xl border border-blue-50 shadow-sm flex justify-between items-center hover:border-blue-200 transition-all">
-          <div>
-            <p class="text-xl font-bold text-blue-950 tracking-tight">
-              {{ cita.fecha_hora_inicio | date:'dd/MM/yyyy HH:mm' }}
-            </p>
-            <div class="mt-2">
-              <span class="px-3 py-1 text-xs font-semibold rounded-full border"
-                    [ngClass]="{
-                      'bg-sky-50 text-sky-700 border-sky-200': cita.estado === 'PENDIENTE',
-                      'bg-indigo-50 text-indigo-700 border-indigo-200': cita.estado === 'CONFIRMADA'
-                    }">
-                {{ cita.estado }}
-              </span>
+  @if (isLoading() && todas().length === 0) {
+    <div class="text-center py-20">
+      <div class="w-10 h-10 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
+    </div>
+  } @else if (!tieneCitas()) {
+    <div class="text-center py-16 bg-blue-50 rounded-2xl border-2 border-dashed border-blue-200">
+      <p class="text-blue-600 font-medium">No tienes citas activas por ahora.</p>
+      <p class="text-sm text-blue-400 mt-1">Cuando te reserven un turno aparecerá aquí.</p>
+    </div>
+  } @else {
+    <!-- ============ HOY ============ -->
+    <div class="mb-8">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-blue-500 mb-3">Hoy</h3>
+      <div class="space-y-4">
+        @for (cita of hoyCitas(); track cita.id) {
+          <div class="bg-white p-6 rounded-2xl border border-blue-100 shadow-sm flex flex-wrap justify-between items-center gap-4 hover:border-blue-200 transition-all">
+            <div>
+              <p class="text-xl font-bold text-blue-950 tracking-tight">
+                {{ cita.fecha_hora_inicio | date:'HH:mm' }}
+              </p>
+              <p class="text-sm text-slate-500 mt-1">
+                @if (cita.cliente_nombre) {
+                  <span class="font-semibold text-slate-700">{{ cita.cliente_nombre }}</span>
+                }
+                @if (cita.cliente_contacto) {
+                  <span class="text-slate-400"> · {{ cita.cliente_contacto }}</span>
+                }
+                @if (cita.servicio_nombre) {
+                  <span class="text-blue-500"> · {{ cita.servicio_nombre }}</span>
+                }
+              </p>
+              <div class="mt-2">
+                <span class="px-3 py-1 text-xs font-semibold rounded-full border"
+                      [ngClass]="{
+                        'bg-sky-50 text-sky-700 border-sky-200': cita.estado === 'PENDIENTE',
+                        'bg-indigo-50 text-indigo-700 border-indigo-200': cita.estado === 'CONFIRMADA'
+                      }">
+                  {{ cita.estado }}
+                </span>
+              </div>
             </div>
-          </div>
 
-          @if (cita.estado === 'PENDIENTE') {
-            <button (click)="confirmarCita(cita.id)" 
-                    [disabled]="isLoading()"
-                    class="px-6 py-2.5 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700 transition-all disabled:bg-sky-300 active:scale-95 shadow-sm shadow-sky-200">
-              Confirmar Cita
-            </button>
-          }
-          @if (cita.estado === 'CONFIRMADA') {
-            <button (click)="completarCita(cita.id)" 
-                    [disabled]="isLoading()"
-                    class="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all disabled:bg-blue-300 active:scale-95 shadow-sm shadow-blue-200">
-              Finalizar Cita
-            </button>
+            @if (cita.estado === 'PENDIENTE') {
+              <button (click)="confirmarCita(cita.id)" 
+                      [disabled]="isLoading()"
+                      class="px-6 py-2.5 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700 transition-all disabled:bg-sky-300 active:scale-95 shadow-sm shadow-sky-200">
+                Confirmar Cita
+              </button>
+            }
+            @if (cita.estado === 'CONFIRMADA') {
+              <button (click)="completarCita(cita.id)" 
+                      [disabled]="isLoading()"
+                      class="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all disabled:bg-blue-300 active:scale-95 shadow-sm shadow-blue-200">
+                Finalizar Cita
+              </button>
+            }
+          </div>
+        } @empty {
+          <div class="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <p class="text-slate-400 text-sm">No tienes citas para hoy.</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- ============ PRÓXIMAS ============ -->
+    @if (proximas().length > 0) {
+      <div class="mb-8">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-500 mb-3">Próximas</h3>
+        <div class="space-y-4">
+          @for (cita of proximas(); track cita.id) {
+            <div class="bg-white p-6 rounded-2xl border border-blue-50 shadow-sm flex flex-wrap justify-between items-center gap-4 hover:border-blue-200 transition-all">
+              <div>
+                <p class="text-xl font-bold text-blue-950 tracking-tight">
+                  {{ cita.fecha_hora_inicio | date:'dd/MM/yyyy HH:mm' }}
+                </p>
+                <p class="text-sm text-slate-500 mt-1">
+                  @if (cita.cliente_nombre) {
+                    <span class="font-semibold text-slate-700">{{ cita.cliente_nombre }}</span>
+                  }
+                  @if (cita.cliente_contacto) {
+                    <span class="text-slate-400"> · {{ cita.cliente_contacto }}</span>
+                  }
+                  @if (cita.servicio_nombre) {
+                    <span class="text-blue-500"> · {{ cita.servicio_nombre }}</span>
+                  }
+                </p>
+                <div class="mt-2">
+                  <span class="px-3 py-1 text-xs font-semibold rounded-full border"
+                        [ngClass]="{
+                          'bg-sky-50 text-sky-700 border-sky-200': cita.estado === 'PENDIENTE',
+                          'bg-indigo-50 text-indigo-700 border-indigo-200': cita.estado === 'CONFIRMADA'
+                        }">
+                    {{ cita.estado }}
+                  </span>
+                </div>
+              </div>
+
+              @if (cita.estado === 'PENDIENTE') {
+                <button (click)="confirmarCita(cita.id)" 
+                        [disabled]="isLoading()"
+                        class="px-6 py-2.5 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700 transition-all disabled:bg-sky-300 active:scale-95 shadow-sm shadow-sky-200">
+                  Confirmar Cita
+                </button>
+              }
+              @if (cita.estado === 'CONFIRMADA') {
+                <button (click)="completarCita(cita.id)" 
+                        [disabled]="isLoading()"
+                        class="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all disabled:bg-blue-300 active:scale-95 shadow-sm shadow-blue-200">
+                  Finalizar Cita
+                </button>
+              }
+            </div>
           }
         </div>
-      } @empty {
-        <div class="text-center py-16 bg-blue-50 rounded-2xl border-2 border-dashed border-blue-200">
-          <p class="text-blue-600 font-medium">No tienes citas activas por ahora.</p>
-        </div>
-      }
+      </div>
     }
-  </div>
+
+    <!-- ============ PASADAS ============ -->
+    @if (pasadas().length > 0) {
+      <div>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Pasadas (pendientes de gestionar)</h3>
+        <div class="space-y-4">
+          @for (cita of pasadas(); track cita.id) {
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-wrap justify-between items-center gap-4 opacity-90 hover:opacity-100 transition-all">
+              <div>
+                <p class="text-xl font-bold text-slate-500 tracking-tight">
+                  {{ cita.fecha_hora_inicio | date:'dd/MM/yyyy HH:mm' }}
+                </p>
+                <p class="text-sm text-slate-400 mt-1">
+                  @if (cita.cliente_nombre) {
+                    <span class="font-semibold text-slate-500">{{ cita.cliente_nombre }}</span>
+                  }
+                  @if (cita.cliente_contacto) {
+                    <span> · {{ cita.cliente_contacto }}</span>
+                  }
+                  @if (cita.servicio_nombre) {
+                    <span> · {{ cita.servicio_nombre }}</span>
+                  }
+                </p>
+                <div class="mt-2">
+                  <span class="px-3 py-1 text-xs font-semibold rounded-full border bg-slate-100 text-slate-500 border-slate-200">
+                    {{ cita.estado }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="flex gap-2">
+                @if (cita.estado === 'PENDIENTE') {
+                  <button (click)="confirmarCita(cita.id)" 
+                          [disabled]="isLoading()"
+                          class="px-5 py-2.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-xl font-semibold hover:bg-sky-100 transition-all disabled:opacity-50 active:scale-95 text-sm">
+                    Confirmar
+                  </button>
+                }
+                <button (click)="completarCita(cita.id)" 
+                        [disabled]="isLoading()"
+                        class="px-5 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl font-semibold hover:bg-blue-100 transition-all disabled:opacity-50 active:scale-95 text-sm">
+                  Marcar completada
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  }
 </div>

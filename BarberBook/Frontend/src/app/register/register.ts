@@ -16,13 +16,17 @@ export class RegisterComponent {
   user = { nombre: '', apellido: '', email: '', password: '' };
 
   registrar() {
+    if (this.user.password.length < 8) {
+      alert('La contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+
     const payload = {
       username: this.user.email, 
       email: this.user.email,
       nombre: this.user.nombre,
       apellido: this.user.apellido,
       password: this.user.password,
-      rol: 'CLIENTE' 
     };
 
     console.log('Enviando al backend:', payload);

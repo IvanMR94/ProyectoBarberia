@@ -1,6 +1,7 @@
 import { Component, signal, computed, inject, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Barber } from '../models/barber.model';
+import { Barber, BarberServicio } from '../models/barber.model';
 import { ApiService } from '../services/api';
 
 interface CeldaDia {
@@ -9,9 +10,12 @@ interface CeldaDia {
   pasado: boolean;
 }
 
+type Paso = 'calendario' | 'servicio' | 'resumen';
+
 @Component({
   selector: 'app-barber-list',
   standalone: true,
+  imports: [CommonModule],
   templateUrl: './barber-list.html',
 })
 export class BarberListComponent implements OnInit {
@@ -19,6 +23,13 @@ export class BarberListComponent implements OnInit {
   selectedBarber = signal<Barber | null>(null);
   isModalOpen = signal(false);
   disponibilidad = signal<string[]>([]);
+  enviando = signal(false);
+
+  // Flujo de reserva: hora -> servicio -> resumen
+  paso = signal<Paso>('calendario');
+  horaSeleccionada = signal<string | null>(null);
+  servicioSeleccionado = signal<BarberServicio | null>(null);
+  servicioSeSalto = signal(false);
 
   // Fecha de hoy en formato local (no UTC, para que a la noche no se "adelante" el día)
   readonly hoy = this.formatoFecha(new Date());
@@ -72,6 +83,9 @@ export class BarberListComponent implements OnInit {
       `${this.nombresMeses[mes - 1].toLowerCase()} de ${anio}`;
   });
 
+  serviciosBarbero = computed<BarberServicio[]>(
+    () => this.selectedBarber()?.servicios ?? []);
+
   private apiService = inject(ApiService);
   private router = inject(Router);
 
@@ -93,6 +107,10 @@ export class BarberListComponent implements OnInit {
     this.fechaSeleccionada.set(this.hoy);
     this.selectedBarber.set(barber);
     this.isModalOpen.set(true);
+    this.paso.set('calendario');
+    this.horaSeleccionada.set(null);
+    this.servicioSeleccionado.set(null);
+    this.servicioSeSalto.set(false);
     this.cargarDisponibilidad();
   }
 
@@ -145,7 +163,52 @@ export class BarberListComponent implements OnInit {
     this.disponibilidad.set([]);
   }
 
-  reservarCita(hora: string) {
+  // --- Flujo paso a paso ---
+  elegirHora(hora: string) {
+    const servicios = this.serviciosBarbero();
+    if (servicios.length === 0) {
+      alert('Este barbero todavía no tiene servicios cargados.');
+      return;
+    }
+    this.horaSeleccionada.set(hora);
+    this.paso.set('servicio');
+    this.servicioSeleccionado.set(null);
+    this.servicioSeSalto.set(false);
+
+    // Si solo ofrece un servicio, va directo al resumen
+    if (servicios.length === 1) {
+      this.servicioSeleccionado.set(servicios[0]);
+      this.servicioSeSalto.set(true);
+      this.paso.set('resumen');
+    }
+  }
+
+  elegirServicio(servicio: BarberServicio) {
+    this.servicioSeleccionado.set(servicio);
+    this.paso.set('resumen');
+  }
+
+  atras() {
+    if (this.paso() === 'resumen' && this.servicioSeSalto()) {
+      this.paso.set('calendario');
+      this.horaSeleccionada.set(null);
+      this.servicioSeleccionado.set(null);
+      return;
+    }
+    if (this.paso() === 'resumen') {
+      this.paso.set('servicio');
+      this.servicioSeleccionado.set(null);
+      return;
+    }
+    this.paso.set('calendario');
+    this.horaSeleccionada.set(null);
+  }
+
+  reservarCita() {
+    const hora = this.horaSeleccionada();
+    const servicio = this.servicioSeleccionado();
+    if (!hora || !servicio) return;
+
     // Verificamos si hay token antes de intentar reservar
     const token = localStorage.getItem('access');
 
@@ -156,19 +219,22 @@ export class BarberListComponent implements OnInit {
       return;
     }
 
+    this.enviando.set(true);
     const payload = {
       barbero: this.selectedBarber()?.id,
       fecha_hora_inicio: `${this.fechaSeleccionada()}T${hora}:00`,
-      estado: 'PENDIENTE'
+      servicio: servicio.id,
     };
 
     this.apiService.postCita(payload).subscribe({
       next: () => {
+        this.enviando.set(false);
         alert('¡Cita reservada con éxito!');
         this.closeModal();
         this.router.navigate(['/my-appointments']);
       },
       error: (err) => {
+        this.enviando.set(false);
         console.error('Error al reservar:', err);
         alert('Hubo un error al reservar. Por favor intenta de nuevo.');
       }

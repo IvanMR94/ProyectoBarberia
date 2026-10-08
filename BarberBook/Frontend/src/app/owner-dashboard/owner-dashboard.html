@@ -1,0 +1,459 @@
+<div class="max-w-6xl mx-auto p-4 sm:p-6">
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <h2 class="text-2xl sm:text-3xl font-extrabold text-blue-950">Panel del Dueño</h2>
+    @if (cargando()) {
+      <span class="text-sm text-slate-400">Actualizando...</span>
+    }
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex flex-wrap gap-2 mb-6">
+    @for (t of tabs; track t.id) {
+      <button
+        (click)="cambiarTab(t.id)"
+        [ngClass]="tab() === t.id
+          ? 'bg-blue-600 text-white shadow-sm shadow-blue-200'
+          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+        class="px-4 py-2 rounded-full text-sm font-medium transition-colors active:scale-95">
+        {{ t.label }}
+      </button>
+    }
+  </div>
+
+  <!-- ======================= RESUMEN ======================= -->
+  @if (tab() === 'resumen') {
+    <!-- Selector de período -->
+    <div class="flex flex-wrap items-end gap-3 mb-6 text-sm">
+      <label class="flex flex-col gap-1 text-slate-500">
+        Desde
+        <input
+          type="date"
+          [ngModel]="desde()"
+          (ngModelChange)="desde.set($event); refrescarPeriodo()"
+          class="border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+      </label>
+      <label class="flex flex-col gap-1 text-slate-500">
+        Hasta
+        <input
+          type="date"
+          [ngModel]="hasta()"
+          (ngModelChange)="hasta.set($event); refrescarPeriodo()"
+          class="border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+      </label>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      @for (k of kpis(); track k.label) {
+        <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+          <p class="text-sm text-slate-500">{{ k.label }}</p>
+          <p class="text-2xl font-extrabold text-blue-950 mt-1">{{ k.valor }}</p>
+        </div>
+      }
+    </div>
+
+    <!-- Por barbero -->
+    <h3 class="font-bold text-blue-950 mb-3">Cortes por barbero</h3>
+    <div class="bg-white rounded-2xl border border-slate-100 overflow-x-auto mb-8 shadow-sm">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-left">
+          <tr>
+            <th class="px-4 py-3 font-medium">Barbero</th>
+            <th class="px-4 py-3 font-medium">Cortes</th>
+            <th class="px-4 py-3 font-medium">Horas</th>
+            <th class="px-4 py-3 font-medium">Ingresos</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (b of stats()?.por_barbero ?? []; track b.barbero) {
+            <tr>
+              <td class="px-4 py-3 font-semibold text-blue-950">{{ b.nombre }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ b.cortes }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ b.horas }}</td>
+              <td class="px-4 py-3 text-slate-700 font-medium">{{ dinero(b.ingresos) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="px-4 py-8 text-center text-slate-400">
+                Sin cortes en el período seleccionado.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Por servicio -->
+    <h3 class="font-bold text-blue-950 mb-3">Servicios más pedidos</h3>
+    <div class="bg-white rounded-2xl border border-slate-100 overflow-x-auto mb-8 shadow-sm">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-left">
+          <tr>
+            <th class="px-4 py-3 font-medium">Servicio</th>
+            <th class="px-4 py-3 font-medium">Cortes</th>
+            <th class="px-4 py-3 font-medium">Ingresos</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (s of stats()?.por_servicio ?? []; track s.servicio) {
+            <tr>
+              <td class="px-4 py-3 font-semibold text-blue-950">{{ s.servicio }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ s.cortes }}</td>
+              <td class="px-4 py-3 text-slate-700 font-medium">{{ dinero(s.ingresos) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="3" class="px-4 py-8 text-center text-slate-400">
+                Todavía no hay cortes registrados.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Detalle de cortes -->
+    <h3 class="font-bold text-blue-950 mb-3">Detalle de cortes</h3>
+    <div class="bg-white rounded-2xl border border-slate-100 overflow-x-auto shadow-sm">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-left">
+          <tr>
+            <th class="px-4 py-3 font-medium">Fecha</th>
+            <th class="px-4 py-3 font-medium">Cliente</th>
+            <th class="px-4 py-3 font-medium">Barbero</th>
+            <th class="px-4 py-3 font-medium">Servicio</th>
+            <th class="px-4 py-3 font-medium">Precio</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (c of cortes(); track c.id) {
+            <tr>
+              <td class="px-4 py-3 text-slate-600">{{ c.fecha | date:'dd/MM HH:mm' }}</td>
+              <td class="px-4 py-3 text-slate-700">{{ c.cliente }}</td>
+              <td class="px-4 py-3 text-slate-700">{{ c.barbero }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ c.servicio_nombre || '—' }}</td>
+              <td class="px-4 py-3 font-medium text-blue-950">{{ dinero(c.precio) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="px-4 py-8 text-center text-slate-400">
+                Sin cortes en el período seleccionado.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ======================= BARBEROS ======================= -->
+  @if (tab() === 'barberos') {
+    <div class="flex justify-end mb-4">
+      <button
+        (click)="nuevoBarbero()"
+        class="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors active:scale-95 text-sm shadow-sm shadow-blue-200">
+        + Nuevo barbero
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      @for (b of barberos(); track b.id) {
+        <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+          <div class="flex justify-between items-start gap-3">
+            <div class="min-w-0">
+              <p class="font-bold text-blue-950 truncate">{{ nombreCompleto(b.nombre, b.apellido) }}</p>
+              <p class="text-sm text-slate-500 truncate">{{ b.email }}</p>
+            </div>
+            @if (b.activo) {
+              <span class="shrink-0 px-2.5 py-1 text-xs font-semibold rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">
+                Activo
+              </span>
+            } @else {
+              <span class="shrink-0 px-2.5 py-1 text-xs font-semibold rounded-full border bg-amber-50 text-amber-700 border-amber-200"
+                    [title]="b.nota_pausa">
+                Pausado
+              </span>
+            }
+          </div>
+
+          @if (!b.activo && b.nota_pausa) {
+            <p class="mt-2 text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+              Motivo: {{ b.nota_pausa }}
+            </p>
+          }
+
+          <!-- Servicios que ofrece -->
+          <div class="mt-3">
+            <p class="text-xs text-slate-400 mb-1.5">Servicios que ofrece:</p>
+            <div class="flex flex-wrap gap-1.5">
+              @for (s of servicios(); track s.id) {
+                <button
+                  (click)="alternarServicioBarbero(b, s)"
+                  [disabled]="!b.activo || (b.servicios.length === 1 && b.servicios[0].id === s.id)"
+                  [ngClass]="b.servicios.some(bs => bs.id === s.id)
+                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                    : 'bg-slate-50 text-slate-400 border-slate-200'"
+                  class="px-2.5 py-1 text-xs font-medium rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-60">
+                  {{ s.nombre }}
+                </button>
+              } @empty {
+                <span class="text-xs text-slate-400">No hay servicios cargados.</span>
+              }
+            </div>
+          </div>
+
+          <!-- Stats del período -->
+          <div class="mt-4 grid grid-cols-2 gap-3 text-center">
+            <div class="bg-slate-50 rounded-xl py-2">
+              <p class="text-lg font-bold text-blue-950">{{ b.cortes }}</p>
+              <p class="text-xs text-slate-500">cortes</p>
+            </div>
+            <div class="bg-slate-50 rounded-xl py-2">
+              <p class="text-lg font-bold text-blue-950">{{ dinero(b.ingresos) }}</p>
+              <p class="text-xs text-slate-500">facturado</p>
+            </div>
+          </div>
+
+          <div class="mt-4 flex gap-2">
+            @if (b.activo) {
+              <button
+                (click)="pausarBarbero(b)"
+                class="flex-1 px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-sm font-semibold hover:bg-amber-100 transition-colors active:scale-95">
+                Pausar
+              </button>
+            } @else {
+              <button
+                (click)="reactivarBarbero(b)"
+                class="flex-1 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-sm font-semibold hover:bg-emerald-100 transition-colors active:scale-95">
+                Reactivar
+              </button>
+            }
+          </div>
+        </div>
+      } @empty {
+        <div class="col-span-full text-center py-16 bg-blue-50 rounded-2xl border-2 border-dashed border-blue-200">
+          <p class="text-blue-600 font-medium">Todavía no hay barberos cargados.</p>
+          <p class="text-sm text-blue-400 mt-1">Creá tu primer barbero para empezar a recibir reservas.</p>
+          <button
+            (click)="nuevoBarbero()"
+            class="mt-4 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors active:scale-95">
+            + Crear barbero
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ======================= CLIENTES ======================= -->
+  @if (tab() === 'clientes') {
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <input
+        type="text"
+        [ngModel]="qClientes()"
+        (ngModelChange)="qClientes.set($event); buscarClientes()"
+        placeholder="Buscar por nombre, apellido o email..."
+        class="flex-1 min-w-52 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+      <span class="text-sm text-slate-400">{{ clientes().length }} cliente(s)</span>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-100 overflow-x-auto shadow-sm">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-left">
+          <tr>
+            <th class="px-4 py-3 font-medium">Cliente</th>
+            <th class="px-4 py-3 font-medium">Contacto</th>
+            <th class="px-4 py-3 font-medium">Visitas</th>
+            <th class="px-4 py-3 font-medium">Última visita</th>
+            <th class="px-4 py-3 font-medium">Gasto total</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (c of clientes(); track c.id) {
+            <tr>
+              <td class="px-4 py-3 font-semibold text-blue-950">{{ nombreCompleto(c.nombre, c.apellido) || c.username }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ c.email }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ c.visitas }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ fechaCorta(c.ultima_visita) }}</td>
+              <td class="px-4 py-3 font-medium text-blue-950">{{ dinero(c.gasto) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="px-4 py-10 text-center text-slate-400">
+                No se encontraron clientes.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ======================= SERVICIOS ======================= -->
+  @if (tab() === 'servicios') {
+    <div class="flex justify-end mb-4">
+      <button
+        (click)="nuevoServicio()"
+        class="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors active:scale-95 text-sm shadow-sm shadow-blue-200">
+        + Nuevo servicio
+      </button>
+    </div>
+
+    @if (servicios().length === 0) {
+      <div class="text-center py-16 bg-blue-50 rounded-2xl border-2 border-dashed border-blue-200">
+        <p class="text-blue-600 font-medium">Todavía no cargaste servicios.</p>
+        <p class="text-sm text-blue-400 mt-1">Creá tu primer servicio con su precio para empezar a facturar.</p>
+        <button
+          (click)="nuevoServicio()"
+          class="mt-4 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors active:scale-95">
+          + Crear servicio
+        </button>
+      </div>
+    } @else {
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        @for (s of servicios(); track s.id) {
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <div class="flex justify-between items-start gap-3">
+              <div class="min-w-0">
+                <p class="font-bold text-blue-950 truncate">{{ s.nombre }}</p>
+                <p class="text-xl font-extrabold text-blue-700 mt-1">{{ dinero(s.precio) }}</p>
+              </div>
+              <span class="shrink-0 px-2.5 py-1 text-xs font-semibold rounded-full border"
+                    [ngClass]="s.activo
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-slate-100 text-slate-500 border-slate-200'">
+                {{ s.activo ? 'Activo' : 'Inactivo' }}
+              </span>
+            </div>
+            <div class="mt-4 flex gap-2">
+              <button
+                (click)="editarServicio(s)"
+                class="flex-1 px-3 py-2 bg-sky-50 text-sky-700 border border-sky-200 rounded-xl text-sm font-semibold hover:bg-sky-100 transition-colors active:scale-95">
+                Editar
+              </button>
+              <button
+                (click)="alternarActivoServicio(s)"
+                class="flex-1 px-3 py-2 rounded-xl text-sm font-semibold transition-colors active:scale-95 border"
+                [ngClass]="s.activo
+                  ? 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'">
+                {{ s.activo ? 'Desactivar' : 'Activar' }}
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>
+
+<!-- ===================== MODAL BARBERO ===================== -->
+@if (modalBarbero()) {
+  <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+       (click)="cerrarModalBarbero()">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto"
+         (click)="$event.stopPropagation()">
+      <h3 class="text-xl font-bold text-blue-900">Nuevo barbero</h3>
+      <p class="text-sm text-slate-400 mb-4">Se creará también su usuario de acceso.</p>
+
+      <div class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block text-sm">
+            <span class="text-slate-600 font-medium">Nombre *</span>
+            <input type="text" [(ngModel)]="formBarbero.nombre"
+                   class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-300">
+          </label>
+          <label class="block text-sm">
+            <span class="text-slate-600 font-medium">Apellido</span>
+            <input type="text" [(ngModel)]="formBarbero.apellido"
+                   class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-300">
+          </label>
+        </div>
+        <label class="block text-sm">
+          <span class="text-slate-600 font-medium">Email (usuario) *</span>
+          <input type="email" [(ngModel)]="formBarbero.email"
+                 class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-300">
+        </label>
+        <label class="block text-sm">
+          <span class="text-slate-600 font-medium">Contraseña inicial * (mínimo 8)</span>
+          <input type="password" [(ngModel)]="formBarbero.password" minlength="8"
+                 class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-300">
+        </label>
+        <div class="text-sm">
+          <span class="text-slate-600 font-medium">Servicios que ofrece *</span>
+          <div class="flex flex-wrap gap-1.5 mt-2">
+            @for (s of servicios(); track s.id) {
+              <button
+                type="button"
+                (click)="alternarServicioForm(s.id)"
+                [ngClass]="formBarbero.servicios.includes(s.id)
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-slate-50 text-slate-500 border-slate-200'"
+                class="px-3 py-1.5 text-xs font-medium rounded-full border transition-colors active:scale-95">
+                {{ s.nombre }} · {{ dinero(s.precio) }}
+              </button>
+            } @empty {
+              <span class="text-xs text-amber-600">Cargá servicios primero (pestaña Servicios).</span>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-3 mt-6">
+        <button
+          (click)="cerrarModalBarbero()"
+          class="flex-1 bg-slate-100 text-slate-600 font-medium py-3 rounded-xl hover:bg-slate-200 transition-colors">
+          Cancelar
+        </button>
+        <button
+          (click)="guardarBarbero()"
+          [disabled]="!formBarberoValido() || guardandoBarbero()"
+          class="flex-1 bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition-colors disabled:bg-blue-300 active:scale-95">
+          {{ guardandoBarbero() ? 'Guardando...' : 'Crear barbero' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ===================== MODAL SERVICIO ===================== -->
+@if (modalServicio()) {
+  <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+       (click)="cerrarModalServicio()">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-sm shadow-2xl"
+         (click)="$event.stopPropagation()">
+      <h3 class="text-xl font-bold text-blue-900">
+        {{ servicioEditandoId() ? 'Editar servicio' : 'Nuevo servicio' }}
+      </h3>
+
+      <div class="space-y-3 mt-4">
+        <label class="block text-sm">
+          <span class="text-slate-600 font-medium">Nombre *</span>
+          <input type="text" [(ngModel)]="formServicio.nombre" placeholder="Corte de pelo"
+                 class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-300">
+        </label>
+        <label class="block text-sm">
+          <span class="text-slate-600 font-medium">Precio *</span>
+          <input type="number" min="0" step="100" [(ngModel)]="formServicio.precio" placeholder="3000"
+                 class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-300">
+        </label>
+        @if (precioValido()) {
+          <p class="text-sm text-slate-400">Se verá como: {{ precioFormateado() }}</p>
+        }
+      </div>
+
+      <div class="flex gap-3 mt-6">
+        <button
+          (click)="cerrarModalServicio()"
+          class="flex-1 bg-slate-100 text-slate-600 font-medium py-3 rounded-xl hover:bg-slate-200 transition-colors">
+          Cancelar
+        </button>
+        <button
+          (click)="guardarServicio()"
+          [disabled]="!formServicioValido() || guardandoServicio()"
+          class="flex-1 bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition-colors disabled:bg-blue-300 active:scale-95">
+          {{ guardandoServicio() ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

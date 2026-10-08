@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth-guard';
 import { BarberDashboardComponent } from './barber-dashboard/barber-dashboard';
+import { ROL } from './models/roles';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'barbers', pathMatch: 'full' },
@@ -20,13 +21,19 @@ export const routes: Routes = [
     path: 'my-appointments', 
     loadComponent: () => import('./my-appointments/my-appointments').then(m => m.MyAppointmentsComponent),
     canActivate: [authGuard],
-    data: { role: 'CLIENTE' }
+    data: { role: ROL.CLIENTE }
   },
   { 
     path: 'barber-dashboard', 
     component: BarberDashboardComponent,
     canActivate: [authGuard],
-    data: { role: 'BARBERO' }
+    data: { role: ROL.BARBERO }
+  },
+  { 
+    path: 'dueno', 
+    loadComponent: () => import('./owner-dashboard/owner-dashboard').then(m => m.OwnerDashboardComponent),
+    canActivate: [authGuard],
+    data: { roles: [ROL.DUENO, ROL.SUPER_ADMIN] }
   },
   // Cualquier ruta desconocida vuelve al inicio
   { path: '**', redirectTo: 'barbers' },

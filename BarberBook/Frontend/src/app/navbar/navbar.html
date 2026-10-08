@@ -1,17 +1,23 @@
 <nav class="bg-white border-b border-sky-100 shadow-sm p-4">
-  <div class="max-w-5xl mx-auto flex justify-between items-center">
+  <div class="max-w-5xl mx-auto flex flex-wrap justify-between items-center gap-3">
     <h1 class="text-xl font-bold text-blue-600">BarberBook</h1>
-    
-    <div class="flex gap-6 items-center">
-      <a routerLink="/barbers" routerLinkActive="text-blue-600 font-bold" class="text-blue-800 hover:text-blue-500 transition">Agenda</a>
-      
+
+    <div class="flex flex-wrap gap-4 sm:gap-6 items-center">
+      <a routerLink="/barbers" routerLinkActive="text-blue-600 font-bold" class="text-blue-800 hover:text-blue-500 transition text-sm sm:text-base">Agenda</a>
+
       @if (isLoggedIn()) {
-        @if (esBarbero()) {
-          <a routerLink="/barber-dashboard" routerLinkActive="text-blue-600 font-bold" class="text-blue-800 hover:text-blue-500 transition">Dashboard</a>
+        @if (esDueno()) {
+          <a routerLink="/dueno" routerLinkActive="text-blue-600 font-bold" class="text-blue-800 hover:text-blue-500 transition text-sm sm:text-base">Dueño</a>
+        } @else if (esBarbero()) {
+          <a routerLink="/barber-dashboard" routerLinkActive="text-blue-600 font-bold" class="text-blue-800 hover:text-blue-500 transition text-sm sm:text-base">Dashboard</a>
         } @else {
-          <a routerLink="/my-appointments" routerLinkActive="text-blue-600 font-bold" class="text-blue-800 hover:text-blue-500 transition">Mis Citas</a>
+          <a routerLink="/my-appointments" routerLinkActive="text-blue-600 font-bold" class="text-blue-800 hover:text-blue-500 transition text-sm sm:text-base">Mis Citas</a>
         }
-        
+
+        @if (nombre()) {
+          <span class="hidden sm:inline text-sm text-slate-500">Hola, {{ nombre() }}</span>
+        }
+
         <button (click)="logout()" class="bg-red-50 text-red-600 px-4 py-1 rounded-full hover:bg-red-100 transition text-sm">
           Salir
         </button>

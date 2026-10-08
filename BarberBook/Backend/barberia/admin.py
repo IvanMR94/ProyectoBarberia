@@ -3,7 +3,8 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 
-from .models import Barbero, Cita
+from .models import Barbero, Cita, Servicio
+from .services import crear_usuario_barbero
 
 User = get_user_model()
 
@@ -68,15 +69,11 @@ class BarberoAdminForm(forms.ModelForm):
         password = self.cleaned_data.get('password')
 
         if not usuario and email and password:
-            # Misma convención que el registro del backend:
-            # username = email, nombre/apellido del barbero y rol BARBERO.
-            usuario = User.objects.create_user(
-                username=email,
+            usuario = crear_usuario_barbero(
                 email=email,
                 password=password,
                 nombre=self.cleaned_data.get('nombre', ''),
                 apellido=self.cleaned_data.get('apellido', ''),
-                rol='BARBERO',
             )
             self.cleaned_data['usuario'] = usuario
             self.instance.usuario = usuario
@@ -97,7 +94,7 @@ class BarberoAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Datos del barbero', {
-            'fields': ('nombre', 'apellido'),
+            'fields': ('nombre', 'apellido', 'servicios'),
         }),
         ('Cuenta de acceso', {
             'fields': ('usuario', 'email', 'password'),
@@ -106,6 +103,13 @@ class BarberoAdmin(admin.ModelAdmin):
                            'cuenta nueva en un solo paso.',
         }),
     )
+
+
+@admin.register(Servicio)
+class ServicioAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'precio', 'activo')
+    list_filter = ('activo',)
+    search_fields = ('nombre',)
 
 
 @admin.register(Cita)

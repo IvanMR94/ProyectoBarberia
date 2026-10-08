@@ -87,6 +87,21 @@ class LoginRolTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.data['rol'], 'BARBERO')
 
+    def test_dueno_conserva_su_rol(self):
+        User.objects.create_user(
+            username='duenox', password='dueno12345', rol='Dueño')
+        r = self.login('duenox', 'dueno12345')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data['rol'], 'Dueño')
+
+    def test_login_incluye_el_nombre(self):
+        User.objects.create_user(
+            username='nombrer@mail.com', password='nombre1234',
+            nombre='Ana', rol='CLIENTE')
+        r = self.login('nombrer@mail.com', 'nombre1234')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data['nombre'], 'Ana')
+
 
 class RefreshTokenTests(TestCase):
     def setUp(self):

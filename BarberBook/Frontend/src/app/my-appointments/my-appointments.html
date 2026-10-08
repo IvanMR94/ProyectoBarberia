@@ -20,6 +20,17 @@
             <p class="text-xl font-bold text-blue-950 tracking-tight">
               {{ cita.fecha_hora_inicio | date:'dd/MM/yyyy HH:mm' }}
             </p>
+            <p class="text-sm text-slate-500 mt-1">
+              @if (cita.barbero_nombre) {
+                Con {{ cita.barbero_nombre }} {{ cita.barbero_apellido }}
+              }
+              @if (cita.servicio_nombre) {
+                <span class="text-slate-400"> · </span>{{ cita.servicio_nombre }}
+              }
+              @if (cita.precio) {
+                <span class="text-blue-600 font-semibold"> · {{ cita.precio | number:'1.0-0' }}</span>
+              }
+            </p>
             <div class="mt-2">
               <span class="px-3 py-1 text-xs font-semibold rounded-full border"
                     [ngClass]="{
@@ -44,7 +55,7 @@
             @if (cita.estado === 'CANCELADA' || cita.estado === 'COMPLETADA') {
               <button (click)="eliminarCita(cita.id)" 
                       [disabled]="isLoading()"
-                      class="px-5 py-2.5 bg-red-50 text-red-700 border border-red-200 rounded-xl font-semibold hover:bg-red-100 transition-all disabled:opacity-50">
+                      class="px-5 py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-xl font-semibold hover:bg-red-100 transition-all disabled:opacity-50">
                 Eliminar
               </button>
             }

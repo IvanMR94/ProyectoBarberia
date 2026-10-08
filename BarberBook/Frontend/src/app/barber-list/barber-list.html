@@ -6,6 +6,17 @@
       <div class="bg-white p-6 rounded-2xl border border-sky-50 shadow-sm hover:shadow-md transition-shadow">
         <h3 class="text-xl font-bold text-blue-800">{{ barber.nombre }} {{ barber.apellido }}</h3>
         <p class="text-slate-500 mt-1 text-sm">Especialista disponible</p>
+
+        @if (barber.servicios?.length) {
+          <div class="flex flex-wrap gap-1.5 mt-3">
+            @for (servicio of barber.servicios; track servicio.id) {
+              <span class="px-2.5 py-1 text-xs font-medium rounded-full bg-sky-50 text-blue-700 border border-sky-100">
+                {{ servicio.nombre }} · {{ servicio.precio | number:'1.0-0' }}
+              </span>
+            }
+          </div>
+        }
+
         <button (click)="openAgenda(barber)" class="mt-5 w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors">
           Ver Agenda
         </button>
@@ -18,66 +29,141 @@
 
 @if (isModalOpen()) {
   <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="bg-white p-6 sm:p-8 rounded-3xl w-full max-w-sm shadow-2xl">
+    <div class="bg-white p-6 sm:p-8 rounded-3xl w-full max-w-sm shadow-2xl max-h-[90vh] overflow-y-auto">
       <h2 class="text-2xl font-bold mb-1 text-blue-900">Agenda de {{ selectedBarber()?.nombre }}</h2>
-      <p class="text-slate-400 text-sm mb-4">Elegí el día y el horario:</p>
 
-      <!-- Calendario navegable -->
-      <div class="flex items-center justify-between mb-2">
-        <button
-          (click)="mesAnterior()"
-          [disabled]="!puedeRetroceder()"
-          class="w-8 h-8 rounded-lg text-blue-700 font-bold hover:bg-sky-100 disabled:text-slate-300 disabled:hover:bg-transparent transition-colors"
-          aria-label="Mes anterior">
-          &#8249;
-        </button>
-        <span class="font-semibold text-blue-900 text-sm">{{ tituloMes() }}</span>
-        <button
-          (click)="mesSiguiente()"
-          class="w-8 h-8 rounded-lg text-blue-700 font-bold hover:bg-sky-100 transition-colors"
-          aria-label="Mes siguiente">
-          &#8250;
-        </button>
+      <!-- Indicador de pasos -->
+      <div class="flex items-center gap-2 text-xs font-medium mb-4">
+        <span [class]="paso() === 'calendario' ? 'text-blue-600' : 'text-slate-400'">1. Horario</span>
+        <span class="text-slate-300">›</span>
+        <span [class]="paso() === 'servicio' ? 'text-blue-600' : 'text-slate-400'">2. Servicio</span>
+        <span class="text-slate-300">›</span>
+        <span [class]="paso() === 'resumen' ? 'text-blue-600' : 'text-slate-400'">3. Confirmar</span>
       </div>
 
-      <div class="grid grid-cols-7 gap-1 text-center">
-        @for (dia of nombresDias; track dia) {
-          <span class="text-[10px] font-semibold uppercase text-slate-400 py-1">{{ dia }}</span>
-        }
-        @for (celda of diasCalendario(); track $index) {
-          @if (celda.dia !== null) {
-            <button
-              (click)="seleccionarDia(celda)"
-              [disabled]="celda.pasado"
-              [class.bg-blue-600]="celda.fecha === fechaSeleccionada()"
-              [class.text-white]="celda.fecha === fechaSeleccionada()"
-              [class.ring-2]="celda.fecha === hoy && celda.fecha !== fechaSeleccionada()"
-              [class.ring-blue-400]="celda.fecha === hoy && celda.fecha !== fechaSeleccionada()"
-              [class.text-slate-300]="celda.pasado && celda.fecha !== fechaSeleccionada()"
-              [class.cursor-not-allowed]="celda.pasado"
-              [class.hover:bg-sky-100]="!celda.pasado && celda.fecha !== fechaSeleccionada()"
-              class="h-8 rounded-lg text-sm font-medium transition-colors">
-              {{ celda.dia }}
-            </button>
-          } @else {
-            <span></span>
-          }
-        }
-      </div>
+      <!-- ============ PASO 1: CALENDARIO ============ -->
+      @if (paso() === 'calendario') {
+        <p class="text-slate-400 text-sm mb-4">Elegí el día y el horario:</p>
 
-      <p class="text-center text-sm text-blue-800 font-medium mt-3">
-        {{ fechaSeleccionadaLarga() }}
-      </p>
-
-      <div class="grid grid-cols-3 gap-3 mt-3">
-        @for (hora of disponibilidad(); track hora) {
-          <button (click)="reservarCita(hora)" class="bg-sky-50 text-blue-700 font-bold rounded-xl p-3 hover:bg-blue-600 hover:text-white transition-all">
-            {{ hora }}
+        <!-- Calendario navegable -->
+        <div class="flex items-center justify-between mb-2">
+          <button
+            (click)="mesAnterior()"
+            [disabled]="!puedeRetroceder()"
+            class="w-8 h-8 rounded-lg text-blue-700 font-bold hover:bg-sky-100 disabled:text-slate-300 disabled:hover:bg-transparent transition-colors"
+            aria-label="Mes anterior">
+            &#8249;
           </button>
-        } @empty {
-          <p class="text-sm text-slate-400 col-span-3 text-center py-4">Sin horarios disponibles para este día.</p>
+          <span class="font-semibold text-blue-900 text-sm">{{ tituloMes() }}</span>
+          <button
+            (click)="mesSiguiente()"
+            class="w-8 h-8 rounded-lg text-blue-700 font-bold hover:bg-sky-100 transition-colors"
+            aria-label="Mes siguiente">
+            &#8250;
+          </button>
+        </div>
+
+        <div class="grid grid-cols-7 gap-1 text-center">
+          @for (dia of nombresDias; track dia) {
+            <span class="text-[10px] font-semibold uppercase text-slate-400 py-1">{{ dia }}</span>
+          }
+          @for (celda of diasCalendario(); track $index) {
+            @if (celda.dia !== null) {
+              <button
+                (click)="seleccionarDia(celda)"
+                [disabled]="celda.pasado"
+                [class.bg-blue-600]="celda.fecha === fechaSeleccionada()"
+                [class.text-white]="celda.fecha === fechaSeleccionada()"
+                [class.ring-2]="celda.fecha === hoy && celda.fecha !== fechaSeleccionada()"
+                [class.ring-blue-400]="celda.fecha === hoy && celda.fecha !== fechaSeleccionada()"
+                [class.text-slate-300]="celda.pasado && celda.fecha !== fechaSeleccionada()"
+                [class.cursor-not-allowed]="celda.pasado"
+                [class.hover:bg-sky-100]="!celda.pasado && celda.fecha !== fechaSeleccionada()"
+                class="h-8 rounded-lg text-sm font-medium transition-colors">
+                {{ celda.dia }}
+              </button>
+            } @else {
+              <span></span>
+            }
+          }
+        </div>
+
+        <p class="text-center text-sm text-blue-800 font-medium mt-3">
+          {{ fechaSeleccionadaLarga() }}
+        </p>
+
+        <div class="grid grid-cols-3 gap-3 mt-3">
+          @for (hora of disponibilidad(); track hora) {
+            <button (click)="elegirHora(hora)" class="bg-sky-50 text-blue-700 font-bold rounded-xl p-3 hover:bg-blue-600 hover:text-white transition-all">
+              {{ hora }}
+            </button>
+          } @empty {
+            <p class="text-sm text-slate-400 col-span-3 text-center py-4">Sin horarios disponibles para este día.</p>
+          }
+        </div>
+      }
+
+      <!-- ============ PASO 2: SERVICIO ============ -->
+      @if (paso() === 'servicio') {
+        <p class="text-slate-400 text-sm mb-1">Elegí el servicio:</p>
+        <p class="text-sm font-semibold text-blue-900 mb-3">
+          {{ fechaSeleccionadaLarga() }} · {{ horaSeleccionada() }}
+        </p>
+
+        <div class="space-y-2">
+          @for (servicio of serviciosBarbero(); track servicio.id) {
+            <button
+              (click)="elegirServicio(servicio)"
+              class="w-full flex justify-between items-center gap-3 bg-sky-50 hover:bg-blue-600 hover:text-white text-blue-800 rounded-xl px-4 py-3 text-left transition-all">
+              <span class="font-semibold">{{ servicio.nombre }}</span>
+              <span class="font-bold">{{ servicio.precio | number:'1.0-0' }}</span>
+            </button>
+          }
+        </div>
+
+        <button (click)="atras()" class="mt-4 w-full bg-slate-100 text-slate-600 font-medium py-2.5 rounded-xl hover:bg-slate-200 transition-colors text-sm">
+          ← Volver al horario
+        </button>
+      }
+
+      <!-- ============ PASO 3: RESUMEN ============ -->
+      @if (paso() === 'resumen') {
+        <div class="bg-slate-50 rounded-2xl p-4 text-sm space-y-2 border border-slate-100">
+          <div class="flex justify-between gap-3">
+            <span class="text-slate-500">Barbero</span>
+            <span class="font-semibold text-blue-950 text-right">{{ selectedBarber()?.nombre }} {{ selectedBarber()?.apellido }}</span>
+          </div>
+          <div class="flex justify-between gap-3">
+            <span class="text-slate-500">Fecha</span>
+            <span class="font-semibold text-blue-950 text-right">{{ fechaSeleccionadaLarga() }}</span>
+          </div>
+          <div class="flex justify-between gap-3">
+            <span class="text-slate-500">Hora</span>
+            <span class="font-semibold text-blue-950">{{ horaSeleccionada() }}</span>
+          </div>
+          <div class="flex justify-between gap-3">
+            <span class="text-slate-500">Servicio</span>
+            <span class="font-semibold text-blue-950 text-right">{{ servicioSeleccionado()?.nombre }}</span>
+          </div>
+          <div class="flex justify-between gap-3 border-t border-slate-200 pt-2">
+            <span class="text-slate-500 font-medium">Precio</span>
+            <span class="font-extrabold text-blue-700 text-base">{{ servicioSeleccionado()?.precio | number:'1.0-0' }}</span>
+          </div>
+        </div>
+
+        <button
+          (click)="reservarCita()"
+          [disabled]="enviando()"
+          class="mt-4 w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors disabled:bg-blue-300 active:scale-95">
+          {{ enviando() ? 'Reservando...' : 'Confirmar reserva' }}
+        </button>
+
+        @if (!servicioSeSalto()) {
+          <button (click)="atras()" class="mt-2 w-full bg-slate-100 text-slate-600 font-medium py-2.5 rounded-xl hover:bg-slate-200 transition-colors text-sm">
+            ← Cambiar servicio
+          </button>
         }
-      </div>
+      }
 
       <button (click)="closeModal()" class="mt-6 w-full bg-slate-100 text-slate-600 font-medium py-3 rounded-xl hover:bg-slate-200 transition-colors">
         Cerrar

@@ -6,7 +6,8 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from .admin import BarberoAdminForm
-from .models import Barbero, Cita
+from .models import Barbero, Cita, Servicio
+from users.roles import ROL_DUENO
 
 User = get_user_model()
 
@@ -20,17 +21,32 @@ class BaseApiTest(TestCase):
             usuario=self.barbero_user, nombre='Omar', apellido='Rios')
         self.cliente = User.objects.create_user(
             username='cliente_test', password='cliente123')
+        self.servicio = Servicio.objects.create(
+            nombre='Corte', precio=1000)
+        self.barbero.servicios.add(self.servicio)
         self.fecha_futura = timezone.localtime().date() + timedelta(days=30)
 
     def crear_cita(self, hora=10, estado='PENDIENTE', fecha=None,
-                   barbero=None, cliente=None):
+                   barbero=None, cliente=None, servicio=None):
+        servicio = servicio or self.servicio
         return Cita.objects.create(
             barbero=barbero or self.barbero,
             cliente=cliente or self.cliente,
             fecha_hora_inicio=timezone.make_aware(
                 datetime.combine(fecha or self.fecha_futura, time(hora, 0))),
             estado=estado,
+            servicio=servicio,
+            precio=servicio.precio,
         )
+
+    def reservar(self, hora='10:00', barbero=None, servicio=None):
+        """POST real de reserva como el cliente autenticado."""
+        return self.client.post('/api/v1/appointments/', {
+            'barbero': (barbero or self.barbero).id,
+            'servicio': (servicio or self.servicio).id,
+            'fecha_hora_inicio': (
+                f'{self.fecha_futura.isoformat()}T{hora}:00'),
+        }, format='json')
 
 
 class CicloDeVidaCitaTests(BaseApiTest):
@@ -71,6 +87,7 @@ class CicloDeVidaCitaTests(BaseApiTest):
         self.client.force_authenticate(self.cliente)
         r = self.client.post('/api/v1/appointments/', {
             'barbero': self.barbero.id,
+            'servicio': self.servicio.id,
             'fecha_hora_inicio': cita.fecha_hora_inicio.isoformat(),
         }, format='json')
         # 400 si lo detecta el validador, 409 si llega al IntegrityError;
@@ -146,7 +163,8 @@ class PermisosTests(BaseApiTest):
         r = self.client.get('/api/v1/barber-dashboard/')
         self.assertEqual(r.status_code, 200)
         self.assertEqual(len(r.data), 1)
-        self.assertEqual(r.data[0]['barbero'], self.barbero.id)
+        self.assertEqual(r.data[0]['cliente_nombre'], 'cliente_test')
+        self.assertEqual(r.data[0]['servicio_nombre'], 'Corte')
 
 
 class DisponibilidadTests(BaseApiTest):
@@ -197,6 +215,7 @@ class ReservaTests(BaseApiTest):
         self.client.force_authenticate(self.cliente)
         r = self.client.post('/api/v1/appointments/', {
             'barbero': self.barbero.id,
+            'servicio': self.servicio.id,
             'fecha_hora_inicio': (
                 timezone.now() - timedelta(hours=1)).isoformat(),
         }, format='json')
@@ -204,14 +223,12 @@ class ReservaTests(BaseApiTest):
 
     def test_se_puede_reservar_un_dia_futuro(self):
         self.client.force_authenticate(self.cliente)
-        r = self.client.post('/api/v1/appointments/', {
-            'barbero': self.barbero.id,
-            'fecha_hora_inicio': timezone.make_aware(
-                datetime.combine(self.fecha_futura, time(15, 0))).isoformat(),
-        }, format='json')
+        r = self.reservar(hora='15:00')
         self.assertEqual(r.status_code, 201)
         self.assertEqual(r.data['fecha_hora_inicio'][:10],
                          self.fecha_futura.isoformat())
+        self.assertEqual(r.data['precio'], '1000.00')
+        self.assertEqual(r.data['servicio_nombre'], 'Corte')
 
 
 class BarberoAdminTests(BaseApiTest):
@@ -283,3 +300,261 @@ class BarberoAdminTests(BaseApiTest):
 
         r = self.client.get(f'/admin/barberia/barbero/{self.barbero.id}/change/')
         self.assertEqual(r.status_code, 200)
+
+
+class PermisosDuenoTests(BaseApiTest):
+    def setUp(self):
+        super().setUp()
+        self.dueno = User.objects.create_user(
+            username='dueno_test', password='dueno12345', rol=ROL_DUENO)
+        self.superadmin = User.objects.create_user(
+            username='super_test', password='super12345', rol='SUPER_ADMIN')
+
+    def test_cliente_no_entra_al_panel(self):
+        self.client.force_authenticate(self.cliente)
+        r = self.client.get('/api/v1/owner/stats/')
+        self.assertEqual(r.status_code, 403)
+
+    def test_barbero_no_entra_al_panel(self):
+        self.client.force_authenticate(self.barbero_user)
+        r = self.client.get('/api/v1/owner/stats/')
+        self.assertEqual(r.status_code, 403)
+
+    def test_dueno_entra_al_panel(self):
+        self.client.force_authenticate(self.dueno)
+        r = self.client.get('/api/v1/owner/stats/')
+        self.assertEqual(r.status_code, 200)
+
+    def test_superadmin_entra_al_panel(self):
+        self.client.force_authenticate(self.superadmin)
+        r = self.client.get('/api/v1/owner/stats/')
+        self.assertEqual(r.status_code, 200)
+
+
+class StatsDuenoTests(BaseApiTest):
+    def setUp(self):
+        super().setUp()
+        self.dueno = User.objects.create_user(
+            username='dueno_stats', password='dueno12345', rol=ROL_DUENO)
+        self.client.force_authenticate(self.dueno)
+
+    def test_stats_del_periodo(self):
+        self.crear_cita(hora=10, estado='COMPLETADA')
+        self.crear_cita(hora=11, estado='COMPLETADA')
+        self.crear_cita(hora=12, estado='CANCELADA')
+
+        r = self.client.get(
+            f'/api/v1/owner/stats/?desde={self.fecha_futura}&'
+            f'hasta={self.fecha_futura}')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data['cortes'], 2)
+        self.assertEqual(r.data['ingresos'], '2000.00')
+        self.assertEqual(r.data['clientes_atendidos'], 1)
+        self.assertEqual(len(r.data['por_barbero']), 1)
+        self.assertEqual(r.data['por_barbero'][0]['nombre'], 'Omar Rios')
+        self.assertEqual(r.data['por_barbero'][0]['cortes'], 2)
+        self.assertEqual(r.data['por_barbero'][0]['horas'], 2)
+
+    def test_stats_fuera_del_rango_no_cuentan(self):
+        hoy = timezone.localtime().date()
+        self.crear_cita(hora=10, estado='COMPLETADA', fecha=hoy)
+
+        r = self.client.get(
+            f'/api/v1/owner/stats/?desde={self.fecha_futura}&'
+            f'hasta={self.fecha_futura}')
+        self.assertEqual(r.data['cortes'], 0)
+        self.assertEqual(r.data['ingresos'], '0')
+
+    def test_rango_invalido_devuelve_400(self):
+        r = self.client.get('/api/v1/owner/stats/?desde=01-02-2026')
+        self.assertEqual(r.status_code, 400)
+
+    def test_el_precio_historico_no_cambia(self):
+        self.crear_cita(hora=10, estado='COMPLETADA')
+        self.servicio.precio = 9999
+        self.servicio.save()
+
+        r = self.client.get(
+            f'/api/v1/owner/stats/?desde={self.fecha_futura}&'
+            f'hasta={self.fecha_futura}')
+        self.assertEqual(r.data['ingresos'], '1000.00')
+
+
+class AltaBarberoDuenoTests(BaseApiTest):
+    def setUp(self):
+        super().setUp()
+        self.dueno = User.objects.create_user(
+            username='dueno_alta', password='dueno12345', rol=ROL_DUENO)
+        self.client.force_authenticate(self.dueno)
+
+    def test_alta_completa(self):
+        r = self.client.post('/api/v1/owner/barbers/', {
+            'nombre': 'Pedro', 'apellido': 'Gomez',
+            'email': 'pedro@nuevo.com', 'password': 'secreto123',
+            'servicios': [self.servicio.id],
+        }, format='json')
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.data['email'], 'pedro@nuevo.com')
+        self.assertTrue(r.data['activo'])
+        self.assertEqual([s['nombre'] for s in r.data['servicios']],
+                         ['Corte'])
+
+        user = User.objects.get(username='pedro@nuevo.com')
+        self.assertEqual(user.rol, 'BARBERO')
+        self.assertTrue(user.check_password('secreto123'))
+
+    def test_email_duplicado_devuelve_400(self):
+        r = self.client.post('/api/v1/owner/barbers/', {
+            'nombre': 'Otro', 'email': 'cliente_test',
+            'password': 'secreto123',
+        }, format='json')
+        self.assertEqual(r.status_code, 400)
+
+    def test_password_corto_devuelve_400(self):
+        r = self.client.post('/api/v1/owner/barbers/', {
+            'nombre': 'Corto', 'email': 'corto@nuevo.com', 'password': 'abc',
+        }, format='json')
+        self.assertEqual(r.status_code, 400)
+
+
+class PausaBarberoTests(BaseApiTest):
+    def setUp(self):
+        super().setUp()
+        self.dueno = User.objects.create_user(
+            username='dueno_pausa', password='dueno12345', rol=ROL_DUENO)
+        self.client.force_authenticate(self.dueno)
+
+    def test_pausar_y_reactivar(self):
+        r = self.client.patch(
+            f'/api/v1/owner/barbers/{self.barbero.id}/',
+            {'activo': False, 'nota_pausa': 'Vacaciones'},
+            format='json')
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(r.data['activo'])
+        self.assertEqual(r.data['nota_pausa'], 'Vacaciones')
+
+        r2 = self.client.patch(
+            f'/api/v1/owner/barbers/{self.barbero.id}/',
+            {'activo': True}, format='json')
+        self.assertEqual(r2.status_code, 200)
+        self.assertTrue(r2.data['activo'])
+        self.assertEqual(r2.data['nota_pausa'], '')
+
+    def test_barbero_pausado_desaparece_de_la_lista_publica(self):
+        self.client.patch(
+            f'/api/v1/owner/barbers/{self.barbero.id}/',
+            {'activo': False}, format='json')
+        self.client.force_authenticate(user=None)
+
+        r = self.client.get('/api/v1/barbers/')
+        nombres = [b['nombre'] for b in r.data]
+        self.assertNotIn('Omar', nombres)
+
+    def test_barbero_pausado_no_recibe_reservas(self):
+        self.client.patch(
+            f'/api/v1/owner/barbers/{self.barbero.id}/',
+            {'activo': False}, format='json')
+
+        r = self.client.get(
+            f'/api/v1/barbers/{self.barbero.id}/availability/'
+            f'?date={self.fecha_futura}')
+        self.assertEqual(r.status_code, 400)
+
+        self.client.force_authenticate(self.cliente)
+        reserva = self.reservar()
+        self.assertEqual(reserva.status_code, 400)
+
+    def test_listado_del_dueno_incluye_pausados(self):
+        self.client.patch(
+            f'/api/v1/owner/barbers/{self.barbero.id}/',
+            {'activo': False, 'nota_pausa': 'Sanción'}, format='json')
+        r = self.client.get('/api/v1/owner/barbers/')
+        barbero = r.data['barberos'][0]
+        self.assertFalse(barbero['activo'])
+        self.assertEqual(barbero['nota_pausa'], 'Sanción')
+
+
+class ServicioReservaTests(BaseApiTest):
+    def test_no_se_puede_reservar_sin_servicio(self):
+        self.client.force_authenticate(self.cliente)
+        r = self.client.post('/api/v1/appointments/', {
+            'barbero': self.barbero.id,
+            'fecha_hora_inicio': (
+                f'{self.fecha_futura.isoformat()}T16:00:00'),
+        }, format='json')
+        self.assertEqual(r.status_code, 400)
+
+    def test_no_se_puede_reservar_un_servicio_que_el_barbero_no_ofrece(self):
+        otro = Servicio.objects.create(nombre='Barba', precio=500)
+        self.client.force_authenticate(self.cliente)
+        r = self.reservar(hora='16:00', servicio=otro)
+        self.assertEqual(r.status_code, 400)
+
+    def test_servicio_inactivo_no_esta_en_la_lista(self):
+        self.servicio.activo = False
+        self.servicio.save()
+
+        r = self.client.get('/api/v1/barbers/')
+        self.assertEqual(r.data[0]['servicios'], [])
+
+    def test_servicio_inactivo_no_se_puede_reservar(self):
+        self.servicio.activo = False
+        self.servicio.save()
+        self.client.force_authenticate(self.cliente)
+        r = self.reservar(hora='16:00')
+        self.assertEqual(r.status_code, 400)
+
+
+class ClientesYServiciosDuenoTests(BaseApiTest):
+    def setUp(self):
+        super().setUp()
+        self.dueno = User.objects.create_user(
+            username='dueno_clientes', password='dueno12345', rol=ROL_DUENO)
+        self.cliente.nombre = 'Ana'
+        self.cliente.apellido = 'Torres'
+        self.cliente.save()
+        self.crear_cita(hora=10, estado='COMPLETADA')
+        self.crear_cita(hora=11, estado='CANCELADA')
+        self.client.force_authenticate(self.dueno)
+
+    def test_clientes_con_visitas_y_gasto(self):
+        r = self.client.get('/api/v1/owner/clients/')
+        self.assertEqual(r.status_code, 200)
+        cliente = r.data['clientes'][0]
+        self.assertEqual(cliente['nombre'], 'Ana')
+        self.assertEqual(cliente['visitas'], 1)
+        self.assertEqual(cliente['gasto'], '1000.00')
+        self.assertIsNotNone(cliente['ultima_visita'])
+
+    def test_crear_servicio(self):
+        r = self.client.post('/api/v1/owner/services/', {
+            'nombre': 'Barba', 'precio': '500.00',
+        }, format='json')
+        self.assertEqual(r.status_code, 201)
+        self.assertTrue(r.data['activo'])
+
+    def test_servicio_con_precio_invalido(self):
+        r = self.client.post('/api/v1/owner/services/', {
+            'nombre': 'Gratis', 'precio': '0',
+        }, format='json')
+        self.assertEqual(r.status_code, 400)
+
+    def test_editar_precio_y_baja_logica(self):
+        r = self.client.patch(
+            f'/api/v1/owner/services/{self.servicio.id}/',
+            {'precio': '1500.00', 'activo': False}, format='json')
+        self.assertEqual(r.status_code, 200)
+        self.servicio.refresh_from_db()
+        self.assertEqual(str(self.servicio.precio), '1500.00')
+        self.assertFalse(self.servicio.activo)
+
+    def test_cortes_del_periodo(self):
+        r = self.client.get(
+            f'/api/v1/owner/appointments/?desde={self.fecha_futura}&'
+            f'hasta={self.fecha_futura}')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.data['cortes']), 1)
+        corte = r.data['cortes'][0]
+        self.assertEqual(corte['barbero'], 'Omar Rios')
+        self.assertEqual(corte['cliente'], 'Ana Torres')
+        self.assertEqual(corte['servicio_nombre'], 'Corte')

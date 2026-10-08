@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Cita {
   id: number;
@@ -8,12 +9,26 @@ export interface Cita {
   fecha_hora_inicio: string;
   estado: 'PENDIENTE' | 'CONFIRMADA' | 'COMPLETADA' | 'CANCELADA';
   cliente: number;
+  precio?: string | null;
+  servicio?: number;
+  barbero_nombre?: string;
+  barbero_apellido?: string;
+  servicio_nombre?: string | null;
+  cliente_nombre?: string;
+  cliente_contacto?: string;
+}
+
+export interface Servicio {
+  id: number;
+  nombre: string;
+  precio: string;
+  activo?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private http = inject(HttpClient);
-  private readonly baseUrl = 'http://127.0.0.1:8000/api/v1';
+  private readonly baseUrl = environment.apiUrl;
 
   private readonly ENDPOINTS = {
     login: `${this.baseUrl}/auth/login/`,
@@ -22,6 +37,7 @@ export class ApiService {
     appointments: `${this.baseUrl}/appointments/`,
     myAppointments: `${this.baseUrl}/my-appointments/`,
     barberDashboard: `${this.baseUrl}/barber-dashboard/`,
+    owner: `${this.baseUrl}/owner`,
   };
 
   private authStatus = new BehaviorSubject<boolean>(!!localStorage.getItem('access'));
@@ -31,11 +47,16 @@ export class ApiService {
     this.authStatus.next(!!localStorage.getItem('access'));
   }
 
-  // --- MÉTODO CRUCIAL PARA ARREGLAR EL BOTÓN "SALIR" ---
-  logout() {
+  limpiarSesion() {
     localStorage.removeItem('access');
     localStorage.removeItem('rol');
+    localStorage.removeItem('nombre');
     this.updateAuthStatus();
+  }
+
+  // --- MÉTODO CRUCIAL PARA ARREGLAR EL BOTÓN "SALIR" ---
+  logout() {
+    this.limpiarSesion();
     // Forzamos la navegación al login después de limpiar
     window.location.href = '/login'; 
   }
@@ -78,5 +99,52 @@ export class ApiService {
 
   cancelarCita(id: number): Observable<any> {
     return this.http.delete(`${this.ENDPOINTS.appointments}${id}/`);
+  }
+
+  // --- Panel del dueño ---
+  getOwnerStats(params: { desde?: string; hasta?: string }): Observable<any> {
+    return this.http.get(`${this.ENDPOINTS.owner}/stats/`, {
+      params: params as any,
+    });
+  }
+
+  getOwnerBarbers(params: { desde?: string; hasta?: string } = {}): Observable<any> {
+    return this.http.get(`${this.ENDPOINTS.owner}/barbers/`, {
+      params: params as any,
+    });
+  }
+
+  createOwnerBarber(data: any): Observable<any> {
+    return this.http.post(`${this.ENDPOINTS.owner}/barbers/`, data);
+  }
+
+  updateOwnerBarber(id: number, data: any): Observable<any> {
+    return this.http.patch(`${this.ENDPOINTS.owner}/barbers/${id}/`, data);
+  }
+
+  getOwnerClients(q: string = ''): Observable<any> {
+    return this.http.get(`${this.ENDPOINTS.owner}/clients/`, {
+      params: q ? { q } : {},
+    });
+  }
+
+  getOwnerAppointments(params: {
+    desde?: string; hasta?: string; barbero?: number;
+  }): Observable<any> {
+    return this.http.get(`${this.ENDPOINTS.owner}/appointments/`, {
+      params: params as any,
+    });
+  }
+
+  getOwnerServices(): Observable<Servicio[]> {
+    return this.http.get<Servicio[]>(`${this.ENDPOINTS.owner}/services/`);
+  }
+
+  createOwnerService(data: { nombre: string; precio: string }): Observable<Servicio> {
+    return this.http.post<Servicio>(`${this.ENDPOINTS.owner}/services/`, data);
+  }
+
+  updateOwnerService(id: number, data: any): Observable<Servicio> {
+    return this.http.patch<Servicio>(`${this.ENDPOINTS.owner}/services/${id}/`, data);
   }
 }

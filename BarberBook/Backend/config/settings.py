@@ -165,6 +165,12 @@ SIMPLE_JWT = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Horario de atención y duración de cada cita (configurables por entorno)
+BARBERIA_HORA_INICIO = int(os.environ.get('BARBERIA_HORA_INICIO', '9'))
+BARBERIA_HORA_FIN = int(os.environ.get('BARBERIA_HORA_FIN', '21'))
+BARBERIA_DURACION_CITA_MINUTOS = int(
+    os.environ.get('BARBERIA_DURACION_CITA_MINUTOS', '60'))
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
     "http://127.0.0.1:4200",

@@ -8,8 +8,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .services import get_disponibilidad_barbero
 from .models import Cita, Barbero
 from .serializers import (
-    CitaSerializer, CitaUpdateSerializer, CitaClienteUpdateSerializer,
-    BarberoSerializer, MyTokenObtainPairSerializer,
+    CitaSerializer, CitaUpdateSerializer, CitaBarberoSerializer,
+    CitaClienteUpdateSerializer, BarberoSerializer,
+    MyTokenObtainPairSerializer,
 )
 
 
@@ -43,15 +44,20 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 # --- Vistas existentes ---
 class BarberoListView(generics.ListAPIView):
-    queryset = Barbero.objects.all()
     serializer_class = BarberoSerializer
     permission_classes = [permissions.AllowAny]
+    queryset = Barbero.objects.filter(activo=True).prefetch_related(
+        'servicios').order_by('nombre')
 
 class DisponibilidadBarberoView(APIView):
     permission_classes = [permissions.AllowAny]
     def get(self, request, barbero_id):
         if not isinstance(barbero_id, int):
             return Response({"error": "Barbero inválido"}, status=status.HTTP_400_BAD_REQUEST)
+        if not Barbero.objects.filter(pk=barbero_id, activo=True).exists():
+            return Response(
+                {"error": "Barbero no disponible"},
+                status=status.HTTP_400_BAD_REQUEST)
         fecha_str = request.query_params.get('date')
         if not fecha_str: return Response({"error": "Fecha requerida"}, status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -94,10 +100,14 @@ class MisCitasListView(generics.ListAPIView):
         return Cita.objects.filter(cliente=self.request.user).order_by('-fecha_hora_inicio')
 
 class BarberDashboardView(generics.ListAPIView):
-    serializer_class = CitaSerializer
+    serializer_class = CitaBarberoSerializer
     permission_classes = [permissions.IsAuthenticated]
     def get_queryset(self):
-        return Cita.objects.filter(barbero__usuario=self.request.user).order_by('fecha_hora_inicio')
+        return Cita.objects.filter(
+            barbero__usuario=self.request.user
+        ).select_related(
+            'cliente', 'servicio'
+        ).order_by('fecha_hora_inicio')
 
 class BarberCitaUpdateView(generics.UpdateAPIView):
     serializer_class = CitaUpdateSerializer
