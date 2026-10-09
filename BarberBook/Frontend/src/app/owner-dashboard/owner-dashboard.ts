@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Servicio } from '../services/api';
 import { logError } from '../utils/log';
+import { DialogService } from '../shared/dialog.service';
+import { ToastService } from '../shared/toast.service';
 
 type Tab = 'resumen' | 'barberos' | 'clientes' | 'servicios';
 
@@ -29,6 +31,8 @@ interface BarberoPanel {
 })
 export class OwnerDashboardComponent implements OnInit {
   private api = inject(ApiService);
+  private dialog = inject(DialogService);
+  private toast = inject(ToastService);
   private timerBusqueda: ReturnType<typeof setTimeout> | null = null;
 
   readonly tabs: { id: Tab; label: string }[] = [
@@ -214,66 +218,93 @@ export class OwnerDashboardComponent implements OnInit {
         } else if (typeof detalle === 'string') {
           mensaje = detalle;
         }
-        alert('No se pudo crear el barbero: ' + mensaje);
+        this.toast.error('No se pudo crear el barbero: ' + mensaje);
       },
     });
   }
 
-  pausarBarbero(b: BarberoPanel) {
-    const motivo = prompt(
-      `Motivo de la pausa de ${b.nombre} (vacaciones, licencia, sanción...):`);
+  async pausarBarbero(b: BarberoPanel) {
+    const nombre = this.nombreCompleto(b.nombre, b.apellido);
+    const motivo = await this.dialog.pedirTexto({
+      titulo: `Pausar a ${nombre}`,
+      mensaje: 'Motivo de la pausa (vacaciones, licencia, sanción...):',
+      placeholder: 'Ej: Vacaciones de verano',
+      textoAceptar: 'Pausar',
+      peligro: true,
+    });
     if (motivo === null) return;
     this.api.updateOwnerBarber(b.id, {
       activo: false,
       nota_pausa: motivo.trim(),
     }).subscribe({
-      next: () => this.cargarBarberos(),
-      error: (err) => logError('owner-dashboard: pausar barbero', err),
+      next: () => {
+        this.toast.exito(`${nombre} quedó pausado.`);
+        this.cargarBarberos();
+      },
+      error: (err) => {
+        logError('owner-dashboard: pausar barbero', err);
+        this.toast.error('No se pudo pausar al barbero.');
+      },
     });
   }
 
   reactivarBarbero(b: BarberoPanel) {
     this.api.updateOwnerBarber(b.id, { activo: true }).subscribe({
-      next: () => this.cargarBarberos(),
-      error: (err) => logError('owner-dashboard: reactivar barbero', err),
+      next: () => {
+        this.toast.exito('Barbero reactivado.');
+        this.cargarBarberos();
+      },
+      error: (err) => {
+        logError('owner-dashboard: reactivar barbero', err);
+        this.toast.error('No se pudo reactivar al barbero.');
+      },
     });
   }
 
-  despedirBarbero(b: BarberoPanel) {
+  async despedirBarbero(b: BarberoPanel) {
     const nombre = this.nombreCompleto(b.nombre, b.apellido);
-    const ok = confirm(
-      `¿Despedir a ${nombre}?\n\nSe cancelarán sus citas futuras, `
-      + 'dejará de estar disponible para reservas y no podrá ingresar. '
-      + 'Podrás recontratarlo más adelante.');
+    const ok = await this.dialog.confirmar({
+      titulo: `¿Despedir a ${nombre}?`,
+      mensaje:
+        'Se cancelarán sus citas futuras, dejará de estar disponible '
+        + 'para reservas y no podrá ingresar. Podrás recontratarlo más adelante.',
+      textoConfirmar: 'Despedir',
+      peligro: true,
+    });
     if (!ok) return;
     this.api.deleteOwnerBarber(b.id).subscribe({
       next: (r) => {
         const aviso = r.citas_canceladas
           ? ` Se cancelaron ${r.citas_canceladas} cita/s futura/s.`
           : '';
-        alert(`${nombre} fue despedido del equipo.${aviso}`);
+        this.toast.exito(`${nombre} fue despedido del equipo.${aviso}`);
         this.cargarBarberos();
         this.cargarStats();
         this.cargarCortes();
       },
       error: (err) => {
         logError('owner-dashboard: despedir barbero', err);
-        alert('No se pudo despedir al barbero.');
+        this.toast.error('No se pudo despedir al barbero.');
       },
     });
   }
 
-  recontratarBarbero(b: BarberoPanel) {
+  async recontratarBarbero(b: BarberoPanel) {
     const nombre = this.nombreCompleto(b.nombre, b.apellido);
-    const ok = confirm(
-      `¿Recontratar a ${nombre}?\n\nVolverá a estar activo y disponible `
-      + 'para recibir reservas.');
+    const ok = await this.dialog.confirmar({
+      titulo: `¿Recontratar a ${nombre}?`,
+      mensaje: 'Volverá a estar activo y disponible para recibir reservas.',
+      textoConfirmar: 'Recontratar',
+    });
     if (!ok) return;
     this.api.recontratarOwnerBarber(b.id).subscribe({
-      next: () => this.cargarBarberos(),
+      next: () => {
+        this.toast.exito(`${nombre} volvió al equipo.`);
+        this.cargarBarberos();
+      },
       error: (err) => {
         logError('owner-dashboard: recontratar barbero', err);
-        alert('No se pudo recontratar al barbero.');
+        this.toast.error('No se pudo recontratar al barbero.');
       },
     });
   }
@@ -284,7 +315,7 @@ export class OwnerDashboardComponent implements OnInit {
       ? actual.filter((id) => id !== servicio.id)
       : [...actual, servicio.id];
     if (servicios.length === 0) {
-      alert('El barbero debe ofrecer al menos un servicio.');
+      this.toast.aviso('El barbero debe ofrecer al menos un servicio.');
       return;
     }
     this.api.updateOwnerBarber(b.id, { servicios }).subscribe({
@@ -338,7 +369,7 @@ export class OwnerDashboardComponent implements OnInit {
       error: (err) => {
         this.guardandoServicio.set(false);
         logError('owner-dashboard: guardar servicio', err);
-        alert('No se pudo guardar el servicio. Revisá los datos e intentá de nuevo.');
+        this.toast.error('No se pudo guardar el servicio. Revisá los datos e intentá de nuevo.');
       },
     });
   }

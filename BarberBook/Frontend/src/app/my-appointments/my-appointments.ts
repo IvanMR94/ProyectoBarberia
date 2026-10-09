@@ -1,6 +1,8 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { ApiService, Lealtad } from '../services/api';
 import { CommonModule } from '@angular/common';
+import { DialogService } from '../shared/dialog.service';
+import { ToastService } from '../shared/toast.service';
 
 @Component({
   selector: 'app-my-appointments',
@@ -13,6 +15,8 @@ export class MyAppointmentsComponent implements OnInit {
   isLoading = signal<boolean>(false);
   lealtad = signal<Lealtad | null>(null);
   private apiService = inject(ApiService);
+  private dialog = inject(DialogService);
+  private toast = inject(ToastService);
 
   ngOnInit() {
     this.loadCitas();
@@ -49,23 +53,45 @@ export class MyAppointmentsComponent implements OnInit {
     return parseFloat(cita?.descuento_aplicado || '0') > 0;
   }
 
-  cancelarCita(id: number) {
-    if (confirm('¿Cancelar esta cita?')) {
-      this.isLoading.set(true);
-      this.apiService.updateCita(id, { estado: 'CANCELADA' }).subscribe({
-        next: () => this.loadCitas(),
-        error: () => this.isLoading.set(false)
-      });
-    }
+  async cancelarCita(id: number) {
+    const ok = await this.dialog.confirmar({
+      titulo: 'Cancelar cita',
+      mensaje: '¿Cancelar esta cita? Esta acción no se puede deshacer.',
+      textoConfirmar: 'Sí, cancelar',
+      peligro: true,
+    });
+    if (!ok) return;
+    this.isLoading.set(true);
+    this.apiService.updateCita(id, { estado: 'CANCELADA' }).subscribe({
+      next: () => {
+        this.toast.exito('Cita cancelada.');
+        this.loadCitas();
+      },
+      error: () => {
+        this.toast.error('No se pudo cancelar la cita.');
+        this.isLoading.set(false);
+      }
+    });
   }
 
-  eliminarCita(id: number) {
-    if (confirm('¿Eliminar definitivamente este registro del historial?')) {
-      this.isLoading.set(true);
-      this.apiService.cancelarCita(id).subscribe({
-        next: () => this.loadCitas(),
-        error: () => this.isLoading.set(false)
-      });
-    }
+  async eliminarCita(id: number) {
+    const ok = await this.dialog.confirmar({
+      titulo: 'Eliminar del historial',
+      mensaje: '¿Eliminar definitivamente este registro del historial?',
+      textoConfirmar: 'Eliminar',
+      peligro: true,
+    });
+    if (!ok) return;
+    this.isLoading.set(true);
+    this.apiService.cancelarCita(id).subscribe({
+      next: () => {
+        this.toast.exito('Registro eliminado.');
+        this.loadCitas();
+      },
+      error: () => {
+        this.toast.error('No se pudo eliminar el registro.');
+        this.isLoading.set(false);
+      }
+    });
   }
 }

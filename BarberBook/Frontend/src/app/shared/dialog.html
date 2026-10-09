@@ -1,0 +1,46 @@
+@if (dialog.estado(); as estado) {
+  <div class="overlay-modal" (click)="onOverlayClick($event)">
+    <div class="overlay-modal__card w-full max-w-sm p-6 sm:p-7">
+
+      <h3 class="font-montserrat font-bold text-lg text-hielo mb-2">
+        {{ estado.titulo }}
+      </h3>
+
+      <p class="text-sm text-hielo/70 leading-relaxed mb-5 whitespace-pre-line">
+        {{ estado.mensaje }}
+      </p>
+
+      @if (estado.modo === 'texto') {
+        <input
+          #inputTexto
+          type="text"
+          class="w-full mb-5 bg-tinta border border-borde rounded-xl px-4 py-2.5 text-sm text-hielo placeholder:text-hielo/30 focus:border-neon focus:outline-none transition-colors"
+          [placeholder]="estado.placeholder ?? ''"
+          [(ngModel)]="estado.valorInicial"
+          (keydown.enter)="dialog.aceptar(estado.valorInicial)">
+      }
+
+      <div class="flex justify-end gap-3">
+        <button
+          type="button"
+          (click)="dialog.cancelar()"
+          class="px-4 py-2 rounded-xl border border-borde text-sm font-medium text-hielo/80 hover:bg-borde/60 hover:text-hielo transition-colors">
+          {{ estado.textoCancelar ?? 'Cancelar' }}
+        </button>
+
+        <button
+          #btnAccion
+          type="button"
+          (click)="dialog.aceptar(estado.modo === 'texto' ? estado.valorInicial : undefined)"
+          class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors active:scale-95"
+          [ngClass]="estado.peligro
+            ? 'bg-red-500 text-white hover:bg-red-600'
+            : 'bg-neon text-tinta hover:brightness-110'">
+          {{ estado.modo === 'texto'
+            ? (estado.textoAceptar ?? 'Aceptar')
+            : (estado.textoConfirmar ?? 'Confirmar') }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

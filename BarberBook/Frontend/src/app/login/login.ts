@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../services/api';
 import { ROL } from '../models/roles';
 import { logError } from '../utils/log';
+import { ToastService } from '../shared/toast.service';
 
 @Component({
   selector: 'app-login',
@@ -15,6 +16,7 @@ export class LoginComponent {
   private api = inject(ApiService);
   private router = inject(Router);
   private fb = inject(FormBuilder);
+  private toast = inject(ToastService);
 
   loginForm: FormGroup = this.fb.group({
     username: ['', [Validators.required, Validators.email]],
@@ -62,9 +64,9 @@ export class LoginComponent {
       error: (err) => {
         logError('login', err);
         if (err.status === 429) {
-          alert('Demasiados intentos fallidos. Esperá un minuto y probá de nuevo.');
+          this.toast.error('Demasiados intentos fallidos. Esperá un minuto y probá de nuevo.');
         } else {
-          alert('Credenciales inválidas, intenta nuevamente.');
+          this.toast.error('Credenciales inválidas, intenta nuevamente.');
         }
       }
     });

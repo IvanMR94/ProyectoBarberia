@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService } from '../services/api';
 import { logError } from '../utils/log';
+import { ToastService } from '../shared/toast.service';
 
 @Component({
   selector: 'app-register',
@@ -13,12 +14,13 @@ import { logError } from '../utils/log';
 export class RegisterComponent {
   private api = inject(ApiService);
   private router = inject(Router);
+  private toast = inject(ToastService);
 
   user = { nombre: '', apellido: '', email: '', password: '' };
 
   registrar() {
     if (this.user.password.length < 8) {
-      alert('La contraseña debe tener al menos 8 caracteres.');
+      this.toast.aviso('La contraseña debe tener al menos 8 caracteres.');
       return;
     }
 
@@ -35,7 +37,7 @@ export class RegisterComponent {
 
     this.api.register(payload).subscribe({
       next: () => {
-        alert('¡Registro exitoso! Ya puedes iniciar sesión.');
+        this.toast.exito('¡Registro exitoso! Ya puedes iniciar sesión.');
         this.router.navigate(['/login']);
       },
       error: (err) => {
@@ -46,7 +48,7 @@ export class RegisterComponent {
           const primerError = Object.values(detalle).flat()[0];
           if (typeof primerError === 'string') mensaje = primerError;
         }
-        alert(mensaje);
+        this.toast.error(mensaje);
       }
     });
   }

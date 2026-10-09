@@ -5,6 +5,7 @@ import { provideRouter, Router } from '@angular/router';
 import { vi } from 'vitest';
 
 import { BarberListComponent } from './barber-list';
+import { ToastService } from '../shared/toast.service';
 import { environment } from '../../environments/environment';
 
 describe('BarberListComponent', () => {
@@ -12,6 +13,7 @@ describe('BarberListComponent', () => {
   let fixture: ComponentFixture<BarberListComponent>;
   let httpMock: HttpTestingController;
   let router: Router;
+  let toast: ToastService;
   const baseUrl = environment.apiUrl;
   const barbero = { id: 4, nombre: 'Omar', apellido: 'Rios' };
   const lealtad = {
@@ -34,6 +36,7 @@ describe('BarberListComponent', () => {
     component = fixture.componentInstance;
     httpMock = TestBed.inject(HttpTestingController);
     router = TestBed.inject(Router);
+    toast = TestBed.inject(ToastService);
 
     fixture.detectChanges(); // ngOnInit → GET barbers
     httpMock.expectOne(`${baseUrl}/barbers/`).flush([barbero]);
@@ -118,7 +121,7 @@ describe('BarberListComponent', () => {
       }
     }
 
-    it('hora → servicio → resumen y confirma con el servicio elegido', () => {
+    it('hora → servicio → resumen y confirma con el servicio elegido', async () => {
       localStorage.setItem('access', 'token');
       abrirConServicios();
 
@@ -130,10 +133,10 @@ describe('BarberListComponent', () => {
       expect(component.paso()).toBe('resumen');
       expect(component.servicioSeleccionado()?.id).toBe(2);
 
-      vi.spyOn(window, 'alert');
+      const exitoSpy = vi.spyOn(toast, 'exito').mockImplementation(() => {});
       const navigate = vi.spyOn(router, 'navigate').mockReturnValue(Promise.resolve(true));
 
-      component.reservarCita();
+      await component.reservarCita();
 
       const req = httpMock.expectOne(`${baseUrl}/appointments/`);
       expect(req.request.method).toBe('POST');
@@ -143,6 +146,7 @@ describe('BarberListComponent', () => {
         servicio: 2,
       });
       req.flush({});
+      expect(exitoSpy).toHaveBeenCalled();
       expect(navigate).toHaveBeenCalledWith(['/my-appointments']);
       localStorage.clear();
     });
@@ -162,7 +166,7 @@ describe('BarberListComponent', () => {
     });
 
     it('sin servicios cargados no avanza de paso', () => {
-      const alertSpy = vi.spyOn(window, 'alert');
+      const avisoSpy = vi.spyOn(toast, 'aviso').mockImplementation(() => {});
       component.openAgenda(barbero); // sin servicios
       httpMock.expectOne((r) => r.url.includes('/availability/'))
         .flush({ disponibles: ['10:00'] });
@@ -171,7 +175,7 @@ describe('BarberListComponent', () => {
 
       expect(component.paso()).toBe('calendario');
       expect(component.horaSeleccionada()).toBeNull();
-      expect(alertSpy).toHaveBeenCalled();
+      expect(avisoSpy).toHaveBeenCalled();
     });
 
     it('el botón atrás vuelve del resumen al paso de servicio', () => {

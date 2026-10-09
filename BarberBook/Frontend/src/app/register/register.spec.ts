@@ -5,12 +5,14 @@ import { vi } from 'vitest';
 
 import { RegisterComponent } from './register';
 import { ApiService } from '../services/api';
+import { ToastService } from '../shared/toast.service';
 
 describe('RegisterComponent', () => {
   let component: RegisterComponent;
   let fixture: ComponentFixture<RegisterComponent>;
   let api: ApiService;
   let router: Router;
+  let toast: ToastService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -22,8 +24,11 @@ describe('RegisterComponent', () => {
     component = fixture.componentInstance;
     api = TestBed.inject(ApiService);
     router = TestBed.inject(Router);
+    toast = TestBed.inject(ToastService);
     vi.spyOn(router, 'navigate').mockReturnValue(Promise.resolve(true));
-    vi.spyOn(window, 'alert');
+    vi.spyOn(toast, 'aviso').mockImplementation(() => {});
+    vi.spyOn(toast, 'exito').mockImplementation(() => {});
+    vi.spyOn(toast, 'error').mockImplementation(() => {});
     await fixture.whenStable();
   });
 

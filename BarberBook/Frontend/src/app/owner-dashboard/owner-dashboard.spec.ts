@@ -5,12 +5,16 @@ import { provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 
 import { OwnerDashboardComponent } from './owner-dashboard';
+import { DialogService } from '../shared/dialog.service';
+import { ToastService } from '../shared/toast.service';
 import { environment } from '../../environments/environment';
 
 describe('OwnerDashboardComponent', () => {
   let component: OwnerDashboardComponent;
   let fixture: ComponentFixture<OwnerDashboardComponent>;
   let httpMock: HttpTestingController;
+  let dialog: DialogService;
+  let toast: ToastService;
   const baseUrl = environment.apiUrl;
 
   const servicioFixture = { id: 1, nombre: 'Corte', precio: '1000.00', activo: true };
@@ -54,12 +58,17 @@ describe('OwnerDashboardComponent', () => {
     fixture = TestBed.createComponent(OwnerDashboardComponent);
     component = fixture.componentInstance;
     httpMock = TestBed.inject(HttpTestingController);
+    dialog = TestBed.inject(DialogService);
+    toast = TestBed.inject(ToastService);
     fixture.detectChanges();
     flushCargaInicial();
     fixture.detectChanges();
   });
 
-  afterEach(() => httpMock.verify());
+  afterEach(() => {
+    httpMock.verify();
+    vi.restoreAllMocks();
+  });
 
   it('should create', () => {
     expect(component).toBeTruthy();
@@ -147,11 +156,12 @@ describe('OwnerDashboardComponent', () => {
     expect(component.modalBarbero()).toBe(false);
   });
 
-  it('pausa un barbero enviando el motivo en la nota', () => {
-    vi.spyOn(window, 'prompt').mockReturnValue('Licencia médica');
+  it('pausa un barbero enviando el motivo en la nota', async () => {
+    vi.spyOn(dialog, 'pedirTexto').mockResolvedValue('Licencia médica');
+    vi.spyOn(toast, 'exito').mockImplementation(() => {});
     const barbero = component.barberos()[0];
 
-    component.pausarBarbero(barbero);
+    await component.pausarBarbero(barbero);
 
     const req = httpMock.expectOne((r) => r.url.startsWith(`${baseUrl}/owner/barbers/2/`));
     expect(req.request.method).toBe('PATCH');
@@ -162,21 +172,19 @@ describe('OwnerDashboardComponent', () => {
     httpMock.expectOne((r) => r.url.startsWith(`${baseUrl}/owner/barbers/`)).flush({
       desde: '2026-10-01', hasta: '2026-10-31', barberos: [barberoFixture],
     });
-    vi.restoreAllMocks();
   });
 
-  it('cancelar la pausa no envía nada', () => {
-    vi.spyOn(window, 'prompt').mockReturnValue(null);
-    component.pausarBarbero(component.barberos()[0]);
+  it('cancelar la pausa no envía nada', async () => {
+    vi.spyOn(dialog, 'pedirTexto').mockResolvedValue(null);
+    await component.pausarBarbero(component.barberos()[0]);
     httpMock.expectNone((r) => r.url.includes('/owner/barbers/2/'));
-    vi.restoreAllMocks();
   });
 
-  it('despide un barbero con DELETE y recarga el panel', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    vi.spyOn(window, 'alert').mockImplementation(() => {});
+  it('despide un barbero con DELETE y recarga el panel', async () => {
+    vi.spyOn(dialog, 'confirmar').mockResolvedValue(true);
+    vi.spyOn(toast, 'exito').mockImplementation(() => {});
 
-    component.despedirBarbero(component.barberos()[0]);
+    await component.despedirBarbero(component.barberos()[0]);
 
     const req = httpMock.expectOne(`${baseUrl}/owner/barbers/2/`);
     expect(req.request.method).toBe('DELETE');
@@ -199,21 +207,20 @@ describe('OwnerDashboardComponent', () => {
 
     expect(component.barberosActivos().length).toBe(0);
     expect(component.barberosDespedidos().length).toBe(1);
-    vi.restoreAllMocks();
   });
 
-  it('cancelar el despido no envía nada', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
-    component.despedirBarbero(component.barberos()[0]);
+  it('cancelar el despido no envía nada', async () => {
+    vi.spyOn(dialog, 'confirmar').mockResolvedValue(false);
+    await component.despedirBarbero(component.barberos()[0]);
     httpMock.expectNone((r) => r.method === 'DELETE');
-    vi.restoreAllMocks();
   });
 
-  it('recontrata un ex barbero con POST', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+  it('recontrata un ex barbero con POST', async () => {
+    vi.spyOn(dialog, 'confirmar').mockResolvedValue(true);
+    vi.spyOn(toast, 'exito').mockImplementation(() => {});
     const exBarbero = { ...barberoFixture, despedido: true, activo: false };
 
-    component.recontratarBarbero(exBarbero);
+    await component.recontratarBarbero(exBarbero);
 
     const req = httpMock.expectOne(`${baseUrl}/owner/barbers/2/recontratar/`);
     expect(req.request.method).toBe('POST');
@@ -225,15 +232,13 @@ describe('OwnerDashboardComponent', () => {
 
     expect(component.barberosDespedidos().length).toBe(0);
     expect(component.barberosActivos().length).toBe(1);
-    vi.restoreAllMocks();
   });
 
-  it('cancelar la recontratación no envía nada', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
-    component.recontratarBarbero({ ...barberoFixture, despedido: true });
+  it('cancelar la recontratación no envía nada', async () => {
+    vi.spyOn(dialog, 'confirmar').mockResolvedValue(false);
+    await component.recontratarBarbero({ ...barberoFixture, despedido: true });
     httpMock.expectNone(
       (r) => r.urlWithParams.includes('recontratar'));
-    vi.restoreAllMocks();
   });
 
   it('busca clientes con el parámetro q', () => {

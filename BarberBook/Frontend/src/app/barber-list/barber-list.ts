@@ -4,6 +4,8 @@ import { Router } from '@angular/router';
 import { Barber, BarberServicio } from '../models/barber.model';
 import { ApiService, Lealtad } from '../services/api';
 import { logError } from '../utils/log';
+import { DialogService } from '../shared/dialog.service';
+import { ToastService } from '../shared/toast.service';
 
 interface CeldaDia {
   fecha: string;       // YYYY-MM-DD
@@ -100,6 +102,8 @@ export class BarberListComponent implements OnInit {
 
   private apiService = inject(ApiService);
   private router = inject(Router);
+  private dialog = inject(DialogService);
+  private toast = inject(ToastService);
 
   ngOnInit() {
     this.loadBarbers();
@@ -191,7 +195,7 @@ export class BarberListComponent implements OnInit {
   elegirHora(hora: string) {
     const servicios = this.serviciosBarbero();
     if (servicios.length === 0) {
-      alert('Este barbero todavía no tiene servicios cargados.');
+      this.toast.aviso('Este barbero todavía no tiene servicios cargados.');
       return;
     }
     this.horaSeleccionada.set(hora);
@@ -228,7 +232,7 @@ export class BarberListComponent implements OnInit {
     this.horaSeleccionada.set(null);
   }
 
-  reservarCita() {
+  async reservarCita() {
     const hora = this.horaSeleccionada();
     const servicio = this.servicioSeleccionado();
     if (!hora || !servicio) return;
@@ -237,7 +241,12 @@ export class BarberListComponent implements OnInit {
     const token = localStorage.getItem('access');
 
     if (!token) {
-      if (confirm('¡Ups! Necesitas una cuenta para reservar. ¿Quieres registrarte ahora?')) {
+      const ok = await this.dialog.confirmar({
+        titulo: 'Necesitás una cuenta',
+        mensaje: '¡Ups! Necesitás una cuenta para reservar. ¿Querés registrarte ahora?',
+        textoConfirmar: 'Registrarme',
+      });
+      if (ok) {
         this.router.navigate(['/register']);
       }
       return;
@@ -253,14 +262,14 @@ export class BarberListComponent implements OnInit {
     this.apiService.postCita(payload).subscribe({
       next: () => {
         this.enviando.set(false);
-        alert('¡Cita reservada con éxito!');
+        this.toast.exito('¡Cita reservada con éxito!');
         this.closeModal();
         this.router.navigate(['/my-appointments']);
       },
       error: (err) => {
         this.enviando.set(false);
         logError('barber-list: reservar cita', err);
-        alert('Hubo un error al reservar. Por favor intenta de nuevo.');
+        this.toast.error('Hubo un error al reservar. Por favor intenta de nuevo.');
       }
     });
   }

@@ -1,0 +1,28 @@
+<div
+  class="fixed z-[60] top-4 right-4 left-4 sm:left-auto flex flex-col gap-2 items-stretch sm:items-end pointer-events-none"
+  role="status"
+  aria-live="polite">
+
+  @for (t of toast.toasts(); track t.id) {
+    <div
+      class="toast-enter pointer-events-auto w-full sm:w-80 bg-tarjeta border border-borde border-l-4 rounded-xl shadow-xl flex items-start gap-3 p-3 pr-2"
+      [ngClass]="estiloPorTipo[t.tipo].borde">
+
+      <span
+        class="shrink-0 mt-0.5 w-6 h-6 rounded-full border flex items-center justify-center font-mono text-xs font-medium"
+        [ngClass]="estiloPorTipo[t.tipo].texto">
+        {{ estiloPorTipo[t.tipo].icono }}
+      </span>
+
+      <p class="flex-1 text-sm text-hielo leading-snug pt-0.5">{{ t.mensaje }}</p>
+
+      <button
+        type="button"
+        (click)="toast.cerrar(t.id)"
+        class="shrink-0 w-7 h-7 rounded-lg text-hielo/50 hover:text-hielo hover:bg-borde transition-colors text-sm"
+        aria-label="Cerrar notificación">
+        ✕
+      </button>
+    </div>
+  }
+</div>
