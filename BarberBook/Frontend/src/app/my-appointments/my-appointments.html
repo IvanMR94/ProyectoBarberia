@@ -1,45 +1,45 @@
-<section class="max-w-4xl mx-auto p-6">
-  <div class="flex items-center justify-between mb-8">
-    <h2 class="text-3xl font-extrabold text-blue-950">Mis Citas</h2>
-    <button (click)="loadCitas()" 
+<section class="max-w-4xl mx-auto p-4 sm:p-6">
+  <div class="flex items-center justify-between mb-8 gap-3 flex-wrap">
+    <h2 class="font-anton text-3xl sm:text-4xl uppercase tracking-wide text-hielo">Mis Citas</h2>
+    <button (click)="loadCitas()"
             [disabled]="isLoading()"
-            class="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors">
+            class="text-azulel hover:text-neon font-medium text-sm transition-colors">
       {{ isLoading() ? 'Actualizando...' : '↻ Refrescar' }}
     </button>
   </div>
 
   @if (lealtad(); as l) {
-    <div class="mb-6 bg-white rounded-2xl border border-blue-50 p-5 shadow-sm">
+    <div class="mb-6 bg-tarjeta rounded-2xl border border-borde p-5">
       <div class="flex items-center justify-between gap-4 flex-wrap">
         <div class="min-w-0">
-          <p class="text-sm font-bold text-blue-950">Carnet de fidelidad</p>
+          <p class="text-sm font-montserrat font-bold text-hielo">Carnet de fidelidad</p>
           @if (l.desbloqueado) {
-            <p class="text-xs text-slate-500 mt-0.5">
+            <p class="text-xs text-hielo/50 mt-0.5 font-mono">
               {{ l.sellos }} visita/s completadas · {{ l.visitas_30d }} en los últimos 30 días
             </p>
           } @else {
             <div class="flex items-center gap-1.5 mt-2 flex-wrap">
               @for (p of puntosDesbloqueo(); track $index) {
                 <span class="w-3.5 h-3.5 rounded-full"
-                      [ngClass]="p ? 'bg-blue-500' : 'bg-slate-200'"></span>
+                      [ngClass]="p ? 'bg-neon' : 'bg-borde'"></span>
               }
-              <span class="text-xs text-slate-500 ml-1.5">
+              <span class="text-xs text-hielo/50 ml-1.5">
                 Te falta/n {{ l.faltan_para_desbloquear }} visita/s para desbloquear tus descuentos
               </span>
             </div>
           }
         </div>
         @if (l.desbloqueado && l.nivel) {
-          <span class="shrink-0 px-3 py-1.5 text-sm font-bold rounded-full border"
+          <span class="shrink-0 px-3 py-1.5 text-sm font-mono font-medium rounded-full border"
                 [ngClass]="l.nivel === 'Preferencial'
-                  ? 'bg-amber-50 text-amber-700 border-amber-200'
-                  : 'bg-blue-50 text-blue-700 border-blue-200'">
+                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                  : 'bg-azulel/10 text-azulel border-azulel/30'">
             {{ l.nivel }} −{{ l.descuento_pct }}%
           </span>
         }
       </div>
       @if (l.desbloqueado && !l.nivel) {
-        <p class="text-xs text-slate-500 mt-2">
+        <p class="text-xs text-hielo/50 mt-2">
           Visitános {{ l.umbral_frecuente }} veces en 30 días para ser Frecuente (−5%) y
           {{ l.umbral_preferencial }} para Preferencial (−10%).
         </p>
@@ -50,62 +50,62 @@
   <div class="space-y-4">
     @if (isLoading() && citas().length === 0) {
       <div class="text-center py-20">
-        <div class="w-10 h-10 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
+        <div class="w-10 h-10 border-4 border-borde border-t-neon rounded-full animate-spin mx-auto"></div>
       </div>
     } @else {
       @for (cita of citas(); track cita.id) {
-        <div class="bg-white p-6 rounded-2xl border border-blue-50 shadow-sm flex justify-between items-center hover:border-blue-200 transition-all">
+        <div class="bg-tarjeta p-5 sm:p-6 rounded-2xl border border-borde flex flex-wrap justify-between items-center gap-4 hover:border-azul transition-colors">
           <div>
-            <p class="text-xl font-bold text-blue-950 tracking-tight">
+            <p class="text-xl font-mono font-medium text-hielo tracking-tight">
               {{ cita.fecha_hora_inicio | date:'dd/MM/yyyy HH:mm' }}
             </p>
-            <p class="text-sm text-slate-500 mt-1">
+            <p class="text-sm text-hielo/60 mt-1">
               @if (cita.barbero_nombre) {
-                Con {{ cita.barbero_nombre }} {{ cita.barbero_apellido }}
+                <span class="font-montserrat font-semibold text-hielo/90">Con {{ cita.barbero_nombre }} {{ cita.barbero_apellido }}</span>
               }
               @if (cita.servicio_nombre) {
-                <span class="text-slate-400"> · </span>{{ cita.servicio_nombre }}
+                <span class="text-hielo/30"> · </span>{{ cita.servicio_nombre }}
               }
               @if (cita.precio) {
-                <span class="text-blue-600 font-semibold"> · {{ cita.precio | number:'1.0-0' }}</span>
+                <span class="text-azulel font-mono font-medium"> · {{ cita.precio | number:'1.0-0' }}</span>
               }
               @if (conDescuento(cita)) {
-                <span class="text-emerald-600 font-semibold"> · −{{ cita.descuento_aplicado | number:'1.0-0' }} de descuento</span>
+                <span class="text-neon font-mono font-medium"> · −{{ cita.descuento_aplicado | number:'1.0-0' }} de descuento</span>
               }
             </p>
             <div class="mt-2">
-              <span class="px-3 py-1 text-xs font-semibold rounded-full border"
+              <span class="px-3 py-1 text-xs font-mono uppercase rounded-full border"
                     [ngClass]="{
-                      'bg-green-50 text-green-700 border-green-200': cita.estado === 'COMPLETADA',
-                      'bg-sky-50 text-sky-700 border-sky-200': cita.estado === 'PENDIENTE',
-                      'bg-indigo-50 text-indigo-700 border-indigo-200': cita.estado === 'CONFIRMADA',
-                      'bg-slate-100 text-slate-600 border-slate-200': cita.estado === 'CANCELADA'
+                      'bg-neon/10 text-neon border-neon/30': cita.estado === 'COMPLETADA',
+                      'bg-amber-500/10 text-amber-400 border-amber-500/30': cita.estado === 'PENDIENTE',
+                      'bg-azulel/10 text-azulel border-azulel/30': cita.estado === 'CONFIRMADA',
+                      'bg-red-500/10 text-red-400 border-red-500/30': cita.estado === 'CANCELADA'
                     }">
                 {{ cita.estado }}
               </span>
             </div>
           </div>
-          
+
           <div class="flex gap-2">
             @if (cita.estado === 'PENDIENTE' || cita.estado === 'CONFIRMADA') {
-              <button (click)="cancelarCita(cita.id)" 
+              <button (click)="cancelarCita(cita.id)"
                       [disabled]="isLoading()"
-                      class="px-5 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-semibold hover:bg-amber-100 transition-all disabled:opacity-50">
+                      class="px-5 py-2.5 border border-amber-500/40 text-amber-400 rounded-xl font-montserrat font-semibold text-sm hover:bg-amber-500/10 transition-all disabled:opacity-50">
                 Cancelar
               </button>
             }
             @if (cita.estado === 'CANCELADA' || cita.estado === 'COMPLETADA') {
-              <button (click)="eliminarCita(cita.id)" 
+              <button (click)="eliminarCita(cita.id)"
                       [disabled]="isLoading()"
-                      class="px-5 py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-xl font-semibold hover:bg-red-100 transition-all disabled:opacity-50">
+                      class="px-5 py-2.5 border border-red-500/40 text-red-400 rounded-xl font-montserrat font-semibold text-sm hover:bg-red-500/10 transition-all disabled:opacity-50">
                 Eliminar
               </button>
             }
           </div>
         </div>
       } @empty {
-        <div class="text-center py-16 bg-blue-50 rounded-2xl border-2 border-dashed border-blue-200">
-          <p class="text-blue-600 font-medium">No tienes citas registradas.</p>
+        <div class="text-center py-16 bg-tinta rounded-2xl border-2 border-dashed border-borde">
+          <p class="text-azulel font-montserrat font-medium">No tienes citas registradas.</p>
         </div>
       }
     }

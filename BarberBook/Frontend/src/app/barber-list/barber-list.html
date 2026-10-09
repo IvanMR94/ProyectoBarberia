@@ -1,63 +1,64 @@
-<section class="max-w-4xl mx-auto p-6">
-  <h2 class="text-3xl font-bold text-blue-900 mb-8">Nuestros Profesionales</h2>
-  
+<section class="max-w-4xl mx-auto p-4 sm:p-6">
+  <h2 class="font-anton text-3xl sm:text-4xl uppercase tracking-wide text-hielo mb-8">Nuestros Profesionales</h2>
+
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     @for (barber of barbers(); track barber.id) {
-      <div class="bg-white p-6 rounded-2xl border border-sky-50 shadow-sm hover:shadow-md transition-shadow">
-        <h3 class="text-xl font-bold text-blue-800">{{ barber.nombre }} {{ barber.apellido }}</h3>
-        <p class="text-slate-500 mt-1 text-sm">Especialista disponible</p>
+      <div class="bg-tarjeta p-6 rounded-2xl border border-borde hover:border-azul transition-colors">
+        <h3 class="text-xl font-montserrat font-bold text-hielo">{{ barber.nombre }} {{ barber.apellido }}</h3>
+        <p class="text-hielo/50 mt-1 text-sm">Especialista disponible</p>
 
         @if (barber.servicios?.length) {
           <div class="flex flex-wrap gap-1.5 mt-3">
             @for (servicio of barber.servicios; track servicio.id) {
-              <span class="px-2.5 py-1 text-xs font-medium rounded-full bg-sky-50 text-blue-700 border border-sky-100">
+              <span class="px-2.5 py-1 text-xs font-mono rounded-full bg-tinta text-hielo/80 border border-borde">
                 {{ servicio.nombre }} · {{ servicio.precio | number:'1.0-0' }}
               </span>
             }
           </div>
         }
 
-        <button (click)="openAgenda(barber)" class="mt-5 w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors">
+        <button (click)="openAgenda(barber)"
+                class="mt-5 w-full bg-neon text-tinta py-3 rounded-xl font-montserrat font-bold uppercase tracking-wide text-sm hover:brightness-110 transition-all active:scale-[0.99]">
           Ver Agenda
         </button>
       </div>
     } @empty {
-      <p class="text-blue-400">Cargando profesionales...</p>
+      <p class="text-azulel">Cargando profesionales...</p>
     }
   </div>
 </section>
 
 @if (isModalOpen()) {
-  <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="bg-white p-6 sm:p-8 rounded-3xl w-full max-w-sm shadow-2xl max-h-[90vh] overflow-y-auto">
-      <h2 class="text-2xl font-bold mb-1 text-blue-900">Agenda de {{ selectedBarber()?.nombre }}</h2>
+  <div class="overlay-modal">
+    <div class="overlay-modal__card p-6 sm:p-8 w-full max-w-sm max-h-[90vh] overflow-y-auto">
+      <h2 class="font-anton text-2xl uppercase tracking-wide mb-1 text-hielo">Agenda de {{ selectedBarber()?.nombre }}</h2>
 
       <!-- Indicador de pasos -->
-      <div class="flex items-center gap-2 text-xs font-medium mb-4">
-        <span [class]="paso() === 'calendario' ? 'text-blue-600' : 'text-slate-400'">1. Horario</span>
-        <span class="text-slate-300">›</span>
-        <span [class]="paso() === 'servicio' ? 'text-blue-600' : 'text-slate-400'">2. Servicio</span>
-        <span class="text-slate-300">›</span>
-        <span [class]="paso() === 'resumen' ? 'text-blue-600' : 'text-slate-400'">3. Confirmar</span>
+      <div class="flex items-center gap-2 text-xs font-mono mb-4">
+        <span [class]="paso() === 'calendario' ? 'text-neon' : 'text-hielo/40'">1. Horario</span>
+        <span class="text-hielo/25">›</span>
+        <span [class]="paso() === 'servicio' ? 'text-neon' : 'text-hielo/40'">2. Servicio</span>
+        <span class="text-hielo/25">›</span>
+        <span [class]="paso() === 'resumen' ? 'text-neon' : 'text-hielo/40'">3. Confirmar</span>
       </div>
 
       <!-- ============ PASO 1: CALENDARIO ============ -->
       @if (paso() === 'calendario') {
-        <p class="text-slate-400 text-sm mb-4">Elegí el día y el horario:</p>
+        <p class="text-hielo/50 text-sm mb-4">Elegí el día y el horario:</p>
 
         <!-- Calendario navegable -->
         <div class="flex items-center justify-between mb-2">
           <button
             (click)="mesAnterior()"
             [disabled]="!puedeRetroceder()"
-            class="w-8 h-8 rounded-lg text-blue-700 font-bold hover:bg-sky-100 disabled:text-slate-300 disabled:hover:bg-transparent transition-colors"
+            class="w-8 h-8 rounded-lg text-hielo font-bold hover:bg-borde disabled:text-hielo/25 disabled:hover:bg-transparent transition-colors"
             aria-label="Mes anterior">
             &#8249;
           </button>
-          <span class="font-semibold text-blue-900 text-sm">{{ tituloMes() }}</span>
+          <span class="font-montserrat font-semibold text-hielo text-sm">{{ tituloMes() }}</span>
           <button
             (click)="mesSiguiente()"
-            class="w-8 h-8 rounded-lg text-blue-700 font-bold hover:bg-sky-100 transition-colors"
+            class="w-8 h-8 rounded-lg text-hielo font-bold hover:bg-borde transition-colors"
             aria-label="Mes siguiente">
             &#8250;
           </button>
@@ -65,21 +66,21 @@
 
         <div class="grid grid-cols-7 gap-1 text-center">
           @for (dia of nombresDias; track dia) {
-            <span class="text-[10px] font-semibold uppercase text-slate-400 py-1">{{ dia }}</span>
+            <span class="text-[10px] font-mono font-medium uppercase text-hielo/40 py-1">{{ dia }}</span>
           }
           @for (celda of diasCalendario(); track $index) {
             @if (celda.dia !== null) {
               <button
                 (click)="seleccionarDia(celda)"
                 [disabled]="celda.pasado"
-                [class.bg-blue-600]="celda.fecha === fechaSeleccionada()"
+                [class.bg-azulel]="celda.fecha === fechaSeleccionada()"
                 [class.text-white]="celda.fecha === fechaSeleccionada()"
                 [class.ring-2]="celda.fecha === hoy && celda.fecha !== fechaSeleccionada()"
-                [class.ring-blue-400]="celda.fecha === hoy && celda.fecha !== fechaSeleccionada()"
-                [class.text-slate-300]="celda.pasado && celda.fecha !== fechaSeleccionada()"
+                [class.ring-neon]="celda.fecha === hoy && celda.fecha !== fechaSeleccionada()"
+                [class.text-hielo/25]="celda.pasado && celda.fecha !== fechaSeleccionada()"
                 [class.cursor-not-allowed]="celda.pasado"
-                [class.hover:bg-sky-100]="!celda.pasado && celda.fecha !== fechaSeleccionada()"
-                class="h-8 rounded-lg text-sm font-medium transition-colors">
+                [class.hover:bg-borde]="!celda.pasado && celda.fecha !== fechaSeleccionada()"
+                class="h-8 rounded-lg text-sm font-medium transition-colors text-hielo">
                 {{ celda.dia }}
               </button>
             } @else {
@@ -88,106 +89,108 @@
           }
         </div>
 
-        <p class="text-center text-sm text-blue-800 font-medium mt-3">
+        <p class="text-center text-sm text-hielo font-montserrat font-semibold mt-3">
           {{ fechaSeleccionadaLarga() }}
         </p>
 
         <div class="grid grid-cols-3 gap-3 mt-3">
           @for (hora of disponibilidad(); track hora) {
-            <button (click)="elegirHora(hora)" class="bg-sky-50 text-blue-700 font-bold rounded-xl p-3 hover:bg-blue-600 hover:text-white transition-all">
+            <button (click)="elegirHora(hora)"
+                    class="bg-tinta border border-borde text-hielo font-mono font-medium rounded-xl p-3 hover:bg-neon hover:text-tinta hover:border-neon transition-all">
               {{ hora }}
             </button>
           } @empty {
-            <p class="text-sm text-slate-400 col-span-3 text-center py-4">Sin horarios disponibles para este día.</p>
+            <p class="text-sm text-hielo/40 col-span-3 text-center py-4">Sin horarios disponibles para este día.</p>
           }
         </div>
       }
 
       <!-- ============ PASO 2: SERVICIO ============ -->
       @if (paso() === 'servicio') {
-        <p class="text-slate-400 text-sm mb-1">Elegí el servicio:</p>
-        <p class="text-sm font-semibold text-blue-900 mb-3">
-          {{ fechaSeleccionadaLarga() }} · {{ horaSeleccionada() }}
+        <p class="text-hielo/50 text-sm mb-1">Elegí el servicio:</p>
+        <p class="text-sm font-montserrat font-semibold text-hielo mb-3">
+          {{ fechaSeleccionadaLarga() }}
+          <span class="font-mono text-neon">{{ horaSeleccionada() }}</span>
         </p>
 
         <div class="space-y-2">
           @for (servicio of serviciosBarbero(); track servicio.id) {
             <button
               (click)="elegirServicio(servicio)"
-              class="w-full flex justify-between items-center gap-3 bg-sky-50 hover:bg-blue-600 hover:text-white text-blue-800 rounded-xl px-4 py-3 text-left transition-all">
-              <span class="font-semibold">{{ servicio.nombre }}</span>
-              <span class="font-bold">{{ servicio.precio | number:'1.0-0' }}</span>
+              class="w-full flex justify-between items-center gap-3 bg-tinta border border-borde hover:bg-neon hover:text-tinta hover:border-neon text-hielo rounded-xl px-4 py-3 text-left transition-all">
+              <span class="font-montserrat font-semibold">{{ servicio.nombre }}</span>
+              <span class="font-mono font-medium">{{ servicio.precio | number:'1.0-0' }}</span>
             </button>
           }
         </div>
 
-        <button (click)="atras()" class="mt-4 w-full bg-slate-100 text-slate-600 font-medium py-2.5 rounded-xl hover:bg-slate-200 transition-colors text-sm">
+        <button (click)="atras()" class="mt-4 w-full border border-borde text-hielo/70 font-medium py-2.5 rounded-xl hover:bg-borde transition-colors text-sm">
           ← Volver al horario
         </button>
       }
 
       <!-- ============ PASO 3: RESUMEN ============ -->
       @if (paso() === 'resumen') {
-        <div class="bg-slate-50 rounded-2xl p-4 text-sm space-y-2 border border-slate-100">
+        <div class="bg-tinta rounded-2xl p-4 text-sm space-y-2 border border-borde">
           <div class="flex justify-between gap-3">
-            <span class="text-slate-500">Barbero</span>
-            <span class="font-semibold text-blue-950 text-right">{{ selectedBarber()?.nombre }} {{ selectedBarber()?.apellido }}</span>
+            <span class="text-hielo/50">Barbero</span>
+            <span class="font-montserrat font-semibold text-hielo text-right">{{ selectedBarber()?.nombre }} {{ selectedBarber()?.apellido }}</span>
           </div>
           <div class="flex justify-between gap-3">
-            <span class="text-slate-500">Fecha</span>
-            <span class="font-semibold text-blue-950 text-right">{{ fechaSeleccionadaLarga() }}</span>
+            <span class="text-hielo/50">Fecha</span>
+            <span class="font-montserrat font-semibold text-hielo text-right">{{ fechaSeleccionadaLarga() }}</span>
           </div>
           <div class="flex justify-between gap-3">
-            <span class="text-slate-500">Hora</span>
-            <span class="font-semibold text-blue-950">{{ horaSeleccionada() }}</span>
+            <span class="text-hielo/50">Hora</span>
+            <span class="font-mono font-medium text-hielo">{{ horaSeleccionada() }}</span>
           </div>
           <div class="flex justify-between gap-3">
-            <span class="text-slate-500">Servicio</span>
-            <span class="font-semibold text-blue-950 text-right">{{ servicioSeleccionado()?.nombre }}</span>
+            <span class="text-hielo/50">Servicio</span>
+            <span class="font-montserrat font-semibold text-hielo text-right">{{ servicioSeleccionado()?.nombre }}</span>
           </div>
-          <div class="flex justify-between gap-3 border-t border-slate-200 pt-2">
-            <span class="text-slate-500 font-medium">Precio</span>
+          <div class="flex justify-between gap-3 border-t border-borde pt-2">
+            <span class="text-hielo/50 font-medium">Precio</span>
             @if (precioFinal() !== null) {
               <span class="text-right">
-                <span class="text-slate-400 line-through text-sm mr-2">{{ servicioSeleccionado()?.precio | number:'1.0-0' }}</span>
-                <span class="font-extrabold text-emerald-700 text-base">{{ precioFinal() | number:'1.0-0' }}</span>
+                <span class="text-hielo/40 line-through text-sm mr-2 font-mono">{{ servicioSeleccionado()?.precio | number:'1.0-0' }}</span>
+                <span class="font-anton text-neon text-xl">{{ precioFinal() | number:'1.0-0' }}</span>
               </span>
             } @else {
-              <span class="font-extrabold text-blue-700 text-base">{{ servicioSeleccionado()?.precio | number:'1.0-0' }}</span>
+              <span class="font-anton text-hielo text-xl">{{ servicioSeleccionado()?.precio | number:'1.0-0' }}</span>
             }
           </div>
           @if (precioFinal() !== null && lealtad(); as l) {
             <div class="flex justify-end">
-              <span class="px-2 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span class="px-2 py-1 text-xs font-mono font-medium rounded-full bg-neon/10 text-neon border border-neon/30">
                 {{ l.nivel }} −{{ l.descuento_pct }}%
               </span>
             </div>
           }
         </div>
 
-        <p class="mt-4 text-xs text-slate-500 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 flex gap-2">
+        <p class="mt-4 text-xs text-hielo/70 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2.5 flex gap-2">
           <span aria-hidden="true">⏱</span>
-          <span><strong class="text-amber-700">Tenés 10 minutos de tolerancia.</strong>
+          <span><strong class="text-amber-400">Tenés 10 minutos de tolerancia.</strong>
           Si llegás pasado ese tiempo, el turno puede liberarse.</span>
         </p>
 
         <button
           (click)="reservarCita()"
           [disabled]="enviando()"
-          class="mt-4 w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors disabled:bg-blue-300 active:scale-95">
+          class="mt-4 w-full bg-neon text-tinta py-3 rounded-xl font-montserrat font-bold uppercase tracking-wide text-sm hover:brightness-110 transition-all disabled:bg-borde disabled:text-hielo/40 disabled:cursor-not-allowed active:scale-95">
           {{ enviando() ? 'Reservando...' : 'Confirmar reserva' }}
         </button>
 
         @if (!servicioSeSalto()) {
-          <button (click)="atras()" class="mt-2 w-full bg-slate-100 text-slate-600 font-medium py-2.5 rounded-xl hover:bg-slate-200 transition-colors text-sm">
+          <button (click)="atras()" class="mt-2 w-full border border-borde text-hielo/70 font-medium py-2.5 rounded-xl hover:bg-borde transition-colors text-sm">
             ← Cambiar servicio
           </button>
         }
       }
 
-      <button (click)="closeModal()" class="mt-6 w-full bg-slate-100 text-slate-600 font-medium py-3 rounded-xl hover:bg-slate-200 transition-colors">
+      <button (click)="closeModal()" class="mt-6 w-full border border-borde text-hielo/70 font-medium py-3 rounded-xl hover:bg-borde transition-colors">
         Cerrar
       </button>
     </div>
   </div>
-} 
+}
