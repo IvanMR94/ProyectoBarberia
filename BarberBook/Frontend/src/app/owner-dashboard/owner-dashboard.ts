@@ -2,6 +2,7 @@ import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Servicio } from '../services/api';
+import { logError } from '../utils/log';
 
 type Tab = 'resumen' | 'barberos' | 'clientes' | 'servicios';
 
@@ -112,7 +113,7 @@ export class OwnerDashboardComponent implements OnInit {
     this.api.getOwnerStats({ desde: this.desde(), hasta: this.hasta() })
       .subscribe({
         next: (data) => { this.stats.set(data); this.cargando.set(false); },
-        error: (err) => { console.error('Error cargando stats:', err); this.cargando.set(false); },
+        error: (err) => { logError('owner-dashboard: stats', err); this.cargando.set(false); },
       });
   }
 
@@ -120,7 +121,7 @@ export class OwnerDashboardComponent implements OnInit {
     this.api.getOwnerBarbers({ desde: this.desde(), hasta: this.hasta() })
       .subscribe({
         next: (data) => this.barberos.set(data.barberos || []),
-        error: (err) => console.error('Error cargando barberos:', err),
+        error: (err) => logError('owner-dashboard: barberos', err),
       });
   }
 
@@ -128,14 +129,14 @@ export class OwnerDashboardComponent implements OnInit {
     this.api.getOwnerClients(this.qClientes())
       .subscribe({
         next: (data) => this.clientes.set(data.clientes || []),
-        error: (err) => console.error('Error cargando clientes:', err),
+        error: (err) => logError('owner-dashboard: clientes', err),
       });
   }
 
   private cargarServicios() {
     this.api.getOwnerServices().subscribe({
       next: (data) => this.servicios.set(data),
-      error: (err) => console.error('Error cargando servicios:', err),
+      error: (err) => logError('owner-dashboard: servicios', err),
     });
   }
 
@@ -143,7 +144,7 @@ export class OwnerDashboardComponent implements OnInit {
     this.api.getOwnerAppointments({ desde: this.desde(), hasta: this.hasta() })
       .subscribe({
         next: (data) => this.cortes.set(data.cortes || []),
-        error: (err) => console.error('Error cargando cortes:', err),
+        error: (err) => logError('owner-dashboard: cortes', err),
       });
   }
 
@@ -204,10 +205,16 @@ export class OwnerDashboardComponent implements OnInit {
       },
       error: (err) => {
         this.guardandoBarbero.set(false);
-        const detalle = err.error
-          ? JSON.stringify(err.error)
-          : 'Error inesperado';
-        alert('No se pudo crear el barbero: ' + detalle);
+        logError('owner-dashboard: crear barbero', err);
+        const detalle = err?.error;
+        let mensaje = 'Error inesperado';
+        if (detalle && typeof detalle === 'object') {
+          const primerError = Object.values(detalle).flat()[0];
+          if (typeof primerError === 'string') mensaje = primerError;
+        } else if (typeof detalle === 'string') {
+          mensaje = detalle;
+        }
+        alert('No se pudo crear el barbero: ' + mensaje);
       },
     });
   }
@@ -221,14 +228,14 @@ export class OwnerDashboardComponent implements OnInit {
       nota_pausa: motivo.trim(),
     }).subscribe({
       next: () => this.cargarBarberos(),
-      error: (err) => console.error('Error pausando barbero:', err),
+      error: (err) => logError('owner-dashboard: pausar barbero', err),
     });
   }
 
   reactivarBarbero(b: BarberoPanel) {
     this.api.updateOwnerBarber(b.id, { activo: true }).subscribe({
       next: () => this.cargarBarberos(),
-      error: (err) => console.error('Error reactivando barbero:', err),
+      error: (err) => logError('owner-dashboard: reactivar barbero', err),
     });
   }
 
@@ -250,7 +257,7 @@ export class OwnerDashboardComponent implements OnInit {
         this.cargarCortes();
       },
       error: (err) => {
-        console.error('Error despidiendo barbero:', err);
+        logError('owner-dashboard: despedir barbero', err);
         alert('No se pudo despedir al barbero.');
       },
     });
@@ -265,7 +272,7 @@ export class OwnerDashboardComponent implements OnInit {
     this.api.recontratarOwnerBarber(b.id).subscribe({
       next: () => this.cargarBarberos(),
       error: (err) => {
-        console.error('Error recontratando barbero:', err);
+        logError('owner-dashboard: recontratar barbero', err);
         alert('No se pudo recontratar al barbero.');
       },
     });
@@ -282,7 +289,7 @@ export class OwnerDashboardComponent implements OnInit {
     }
     this.api.updateOwnerBarber(b.id, { servicios }).subscribe({
       next: () => this.cargarBarberos(),
-      error: (err) => console.error('Error actualizando servicios:', err),
+      error: (err) => logError('owner-dashboard: actualizar servicios', err),
     });
   }
 
@@ -330,7 +337,8 @@ export class OwnerDashboardComponent implements OnInit {
       },
       error: (err) => {
         this.guardandoServicio.set(false);
-        alert('No se pudo guardar: ' + JSON.stringify(err.error ?? {}));
+        logError('owner-dashboard: guardar servicio', err);
+        alert('No se pudo guardar el servicio. Revisá los datos e intentá de nuevo.');
       },
     });
   }
@@ -341,7 +349,7 @@ export class OwnerDashboardComponent implements OnInit {
         this.cargarServicios();
         this.cargarBarberos();
       },
-      error: (err) => console.error('Error actualizando servicio:', err),
+      error: (err) => logError('owner-dashboard: actualizar servicio', err),
     });
   }
 

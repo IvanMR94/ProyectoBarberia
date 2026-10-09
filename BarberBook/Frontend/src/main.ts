@@ -4,4 +4,4 @@ import { App } from './app/app';
 import 'zone.js';
 
 bootstrapApplication(App, appConfig)
-.catch((err) => console.error(err));
+.catch((err) => console.error('Error al iniciar la aplicación:', err?.message ?? err));

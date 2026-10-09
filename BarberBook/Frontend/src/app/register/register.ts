@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService } from '../services/api';
+import { logError } from '../utils/log';
 
 @Component({
   selector: 'app-register',
@@ -29,7 +30,8 @@ export class RegisterComponent {
       password: this.user.password,
     };
 
-    console.log('Enviando al backend:', payload);
+    // Muestro solo un indicador genérico, sin datos sensibles
+    console.log('Enviando solicitud de registro al backend');
 
     this.api.register(payload).subscribe({
       next: () => {
@@ -37,8 +39,14 @@ export class RegisterComponent {
         this.router.navigate(['/login']);
       },
       error: (err) => {
-        console.error('Error detallado:', err);
-        alert('Error al registrar: ' + JSON.stringify(err.error));
+        logError('register', err);
+        const detalle = err?.error;
+        let mensaje = 'No se pudo completar el registro. Intentá de nuevo.';
+        if (detalle && typeof detalle === 'object') {
+          const primerError = Object.values(detalle).flat()[0];
+          if (typeof primerError === 'string') mensaje = primerError;
+        }
+        alert(mensaje);
       }
     });
   }

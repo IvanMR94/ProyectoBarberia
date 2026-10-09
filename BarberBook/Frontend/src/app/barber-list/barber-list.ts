@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Barber, BarberServicio } from '../models/barber.model';
 import { ApiService, Lealtad } from '../services/api';
+import { logError } from '../utils/log';
 
 interface CeldaDia {
   fecha: string;       // YYYY-MM-DD
@@ -107,7 +108,7 @@ export class BarberListComponent implements OnInit {
   private loadBarbers() {
     this.apiService.getBarbers().subscribe({
       next: (data) => this.barbers.set(data),
-      error: (err) => console.error('Error al cargar barberos:', err)
+      error: (err) => logError('barber-list: cargar barberos', err)
     });
   }
 
@@ -176,7 +177,7 @@ export class BarberListComponent implements OnInit {
     this.disponibilidad.set([]);
     this.apiService.getAvailability(barbero.id, this.fechaSeleccionada()).subscribe({
       next: (res: any) => this.disponibilidad.set(res.disponibles),
-      error: (err) => console.error('Error cargando disponibilidad:', err)
+      error: (err) => logError('barber-list: cargar disponibilidad', err)
     });
   }
 
@@ -258,7 +259,7 @@ export class BarberListComponent implements OnInit {
       },
       error: (err) => {
         this.enviando.set(false);
-        console.error('Error al reservar:', err);
+        logError('barber-list: reservar cita', err);
         alert('Hubo un error al reservar. Por favor intenta de nuevo.');
       }
     });
