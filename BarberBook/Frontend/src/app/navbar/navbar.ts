@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ApiService } from '../services/api';
 import { ROL } from '../models/roles';
@@ -11,12 +11,22 @@ import { ROL } from '../models/roles';
 })
 export class NavbarComponent implements OnInit {
   private api = inject(ApiService);
-  
+
   // Usamos señales para que la UI reaccione instantáneamente
   isLoggedIn = signal(false);
   esBarbero = signal(false);
   esDueno = signal(false);
   nombre = signal('');
+
+  saludo = computed(() => {
+    const nombre = this.nombre();
+    if (nombre) {
+      return `Bienvenido, ${nombre}`;
+    }
+    if (this.esDueno()) return 'Bienvenido dueño';
+    if (this.esBarbero()) return 'Bienvenido barbero';
+    return 'Bienvenido cliente';
+  });
 
   ngOnInit() {
     // Escuchamos el estado centralizado

@@ -34,41 +34,77 @@ describe('NavbarComponent', () => {
     fixture.detectChanges();
   }
 
+  function linkA(href: string): boolean {
+    return !!fixture.nativeElement.querySelector(`a[href="${href}"]`);
+  }
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('muestra el enlace de Dueño solo para el rol Dueño', () => {
+  it('el dueño ve Agenda, Dashboard y el saludo con su nombre primero', () => {
     sesion('Dueño', 'Ana');
 
     expect(component.esDueno()).toBe(true);
     expect(component.esBarbero()).toBe(false);
     expect(component.nombre()).toBe('Ana');
-    expect(fixture.nativeElement.textContent).toContain('Dueño');
-    expect(fixture.nativeElement.textContent).toContain('Hola, Ana');
+    expect(component.saludo()).toBe('Bienvenido, Ana');
+
+    const texto: string = fixture.nativeElement.textContent;
+    expect(texto).toContain('Bienvenido, Ana');
+    expect(texto).toContain('Dashboard');
+    expect(linkA('/dueno')).toBe(true);
+    expect(linkA('/barbers')).toBe(true);
+    expect(linkA('/barber-dashboard')).toBe(false);
   });
 
-  it('un cliente no ve el enlace de Dueño', () => {
-    sesion('CLIENTE');
+  it('un cliente ve Agenda y Mis Citas pero no Dashboard', () => {
+    sesion('CLIENTE', 'Sofia');
 
     expect(component.esDueno()).toBe(false);
-    expect(fixture.nativeElement.textContent).not.toContain('Dueño');
-    expect(fixture.nativeElement.textContent).toContain('Mis Citas');
+    expect(component.saludo()).toBe('Bienvenido, Sofia');
+
+    const texto: string = fixture.nativeElement.textContent;
+    expect(texto).toContain('Mis Citas');
+    expect(texto).not.toContain('Dashboard');
+    expect(linkA('/dueno')).toBe(false);
+    expect(linkA('/barbers')).toBe(true);
+    expect(linkA('/my-appointments')).toBe(true);
   });
 
-  it('un barbero ve su enlace de Dashboard', () => {
-    sesion('BARBERO');
+  it('un barbero solo ve Mi Agenda (no la agenda pública ni Dashboard)', () => {
+    sesion('BARBERO', 'Carlos');
 
     expect(component.esBarbero()).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('Dashboard');
+    expect(component.saludo()).toBe('Bienvenido, Carlos');
+
+    const texto: string = fixture.nativeElement.textContent;
+    expect(texto).toContain('Mi Agenda');
+    expect(texto).not.toContain('Dashboard');
+    expect(linkA('/barber-dashboard')).toBe(true);
+    // El logo siempre apunta a /barbers; el barbero no debe tener el link de Agenda del nav
+    const enlacesAgenda = fixture.nativeElement.querySelectorAll('a[href="/barbers"]');
+    expect(enlacesAgenda.length).toBe(1);
+    expect(linkA('/dueno')).toBe(false);
   });
 
-  it('sin sesión muestra Login en lugar de Salir', () => {
+  it('sin nombre guardado el saludo usa el rol', () => {
+    sesion('BARBERO');
+
+    expect(component.saludo()).toBe('Bienvenido barbero');
+    expect(fixture.nativeElement.textContent).toContain('Bienvenido barbero');
+  });
+
+  it('sin sesión muestra Agenda y Login, y el saludo no', () => {
     api.updateAuthStatus();
     component.ngOnInit();
     fixture.detectChanges();
 
     expect(component.isLoggedIn()).toBe(false);
-    expect(fixture.nativeElement.textContent).toContain('Login');
+    const texto: string = fixture.nativeElement.textContent;
+    expect(texto).toContain('Login');
+    expect(texto).toContain('Agenda');
+    expect(texto).not.toContain('Bienvenido');
+    expect(linkA('/barbers')).toBe(true);
   });
 });
