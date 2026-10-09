@@ -76,4 +76,20 @@ describe('LoginComponent', () => {
     expect(component.loginForm.contains('username')).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('Correo');
   });
+
+  it('muestra el link a la recuperación de contraseña', () => {
+    expect(fixture.nativeElement.textContent).toContain(
+      '¿Olvidaste tu contraseña?');
+  });
+
+  it('guarda el refresh token para poder cerrar sesión en el servidor', () => {
+    vi.spyOn(router, 'navigate').mockReturnValue(Promise.resolve(true));
+    vi.spyOn(api, 'login').mockReturnValue(of({
+      access: 'a', refresh: 'r', rol: 'CLIENTE', nombre: 'Ana' }));
+
+    component.loginForm.patchValue({ username: 'ana@test.com', password: 'secret1' });
+    component.login();
+
+    expect(localStorage.getItem('refresh')).toBe('r');
+  });
 });

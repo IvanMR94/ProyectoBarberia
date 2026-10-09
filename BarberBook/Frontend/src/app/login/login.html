@@ -19,6 +19,11 @@
       @if (loginForm.get('password')?.touched && loginForm.get('password')?.invalid) {
         <p class="text-red-500 text-xs mt-1">Mínimo 6 caracteres.</p>
       }
+      <div class="text-right mt-1">
+        <a routerLink="/recuperar" class="text-sm text-blue-600 hover:underline">
+          ¿Olvidaste tu contraseña?
+        </a>
+      </div>
     </div>
     
     <button type="submit" [disabled]="loginForm.invalid"

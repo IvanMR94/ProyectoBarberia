@@ -72,3 +72,42 @@ describe('Navegación a /dueno', () => {
     http.match(() => true).forEach((r) => r.flush({}));
   });
 });
+
+describe('Navegación a /recuperar', () => {
+  afterEach(() => {
+    localStorage.clear();
+    TestBed.resetTestingModule();
+  });
+
+  it('la ruta pública /recuperar carga el formulario sin sesión', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(routes),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
+    });
+    const harness = await RouterTestingHarness.create();
+
+    await harness.navigateByUrl('/recuperar');
+
+    expect(harness.routeNativeElement?.textContent).toContain(
+      'Recuperar contraseña');
+  });
+
+  it('el link de recuperación es navegable desde el login', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(routes),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
+    });
+    const harness = await RouterTestingHarness.create();
+
+    await harness.navigateByUrl('/login');
+
+    expect(harness.routeNativeElement?.textContent).toContain(
+      '¿Olvidaste tu contraseña?');
+  });
+});

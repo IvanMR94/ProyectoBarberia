@@ -3,6 +3,7 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../services/api';
 import { ROL } from '../models/roles';
+import { logError } from '../utils/log';
 
 @Component({
   selector: 'app-login',
@@ -30,11 +31,16 @@ export class LoginComponent {
       next: (res) => {
         // 1. LIMPIEZA PREVIA: borramos solo las credenciales anteriores
         localStorage.removeItem('access');
+        localStorage.removeItem('refresh');
         localStorage.removeItem('rol');
 
         // 2. GUARDADO
         const rol = res.rol || ROL.CLIENTE;
         localStorage.setItem('access', res.access);
+        if (res.refresh) {
+          // Necesario para poder cerrar la sesión en el servidor (logout).
+          localStorage.setItem('refresh', res.refresh);
+        }
         localStorage.setItem('rol', rol);
         localStorage.setItem('nombre', res.nombre || '');
         
@@ -54,7 +60,7 @@ export class LoginComponent {
         }
       },
       error: (err) => {
-        console.error('Error de login:', err);
+        logError('login', err);
         if (err.status === 429) {
           alert('Demasiados intentos fallidos. Esperá un minuto y probá de nuevo.');
         } else {

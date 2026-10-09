@@ -15,7 +15,15 @@ export const routes: Routes = [
   },
   { 
     path: 'register', 
-    loadComponent: () => import('./register/register').then(m => m.RegisterComponent) 
+    loadComponent: () => import('./register/register').then(m => m.RegisterComponent)
+  },
+  { 
+    path: 'recuperar', 
+    loadComponent: () => import('./forgot-password/forgot-password').then(m => m.ForgotPasswordComponent)
+  },
+  { 
+    path: 'restablecer/:uid/:token', 
+    loadComponent: () => import('./reset-password/reset-password').then(m => m.ResetPasswordComponent)
   },
   { 
     path: 'my-appointments', 

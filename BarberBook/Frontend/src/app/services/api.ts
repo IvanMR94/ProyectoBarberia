@@ -45,6 +45,10 @@ export class ApiService {
   private readonly ENDPOINTS = {
     login: `${this.baseUrl}/auth/login/`,
     register: `${this.baseUrl}/auth/register/`,
+    logout: `${this.baseUrl}/auth/logout/`,
+    passwordReset: `${this.baseUrl}/auth/password-reset/`,
+    passwordResetValidate: `${this.baseUrl}/auth/password-reset/validate/`,
+    passwordResetConfirm: `${this.baseUrl}/auth/password-reset/confirm/`,
     barbers: `${this.baseUrl}/barbers/`,
     appointments: `${this.baseUrl}/appointments/`,
     myAppointments: `${this.baseUrl}/my-appointments/`,
@@ -61,6 +65,7 @@ export class ApiService {
 
   limpiarSesion() {
     localStorage.removeItem('access');
+    localStorage.removeItem('refresh');
     localStorage.removeItem('rol');
     localStorage.removeItem('nombre');
     this.updateAuthStatus();
@@ -68,9 +73,22 @@ export class ApiService {
 
   // --- MÉTODO CRUCIAL PARA ARREGLAR EL BOTÓN "SALIR" ---
   logout() {
+    const refresh = localStorage.getItem('refresh');
+    if (refresh) {
+      // Invalidamos el refresh en el servidor (best-effort) y luego limpiamos.
+      this.http.post(this.ENDPOINTS.logout, { refresh }).subscribe({
+        next: () => this.finalizarSesion(),
+        error: () => this.finalizarSesion(),
+      });
+      return;
+    }
+    this.finalizarSesion();
+  }
+
+  private finalizarSesion() {
     this.limpiarSesion();
     // Forzamos la navegación al login después de limpiar
-    window.location.href = '/login'; 
+    window.location.href = '/login';
   }
 
   login(credentials: any): Observable<any> {
@@ -79,6 +97,25 @@ export class ApiService {
 
   register(userData: any): Observable<any> {
     return this.http.post(this.ENDPOINTS.register, userData);
+  }
+
+  // --- Recuperación de contraseña ---
+  solicitarRecupero(email: string): Observable<any> {
+    return this.http.post(this.ENDPOINTS.passwordReset, { email });
+  }
+
+  validarRecupero(uidb64: string, token: string): Observable<any> {
+    return this.http.post(this.ENDPOINTS.passwordResetValidate, {
+      uidb64, token,
+    });
+  }
+
+  restablecerContrasena(
+    uidb64: string, token: string, password: string,
+  ): Observable<any> {
+    return this.http.post(this.ENDPOINTS.passwordResetConfirm, {
+      uidb64, token, password,
+    });
   }
 
   getBarbers(): Observable<any> {
