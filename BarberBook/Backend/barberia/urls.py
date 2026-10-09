@@ -1,12 +1,14 @@
 from django.urls import path
 from . import views
 from . import views_dueno
-from rest_framework_simplejwt.views import TokenRefreshView
+from users.views import TokenRefreshConRevocacionView
 
 urlpatterns = [
     # --- Auth ---
     path('auth/login/', views.CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    # Refresh con verificación de revocación: rechaza tokens antiguos a un
+    # cambio de contraseña (cierra las sesiones abiertas en el servidor).
+    path('auth/refresh/', TokenRefreshConRevocacionView.as_view(), name='token_refresh'),
     
     # --- Barberos y Disponibilidad ---
     path('barbers/', views.BarberoListView.as_view(), name='barber-list'),

@@ -1,7 +1,10 @@
 import os
 import secrets
+import sys
 from datetime import timedelta
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,13 +22,21 @@ if _env_file.exists():
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or secrets.token_urlsafe(50)
-
 # SECURITY WARNING: don't run with debug turned on in production!
 # Seguro por defecto: DEBUG solo si el entorno lo activa explícitamente
 # (el .env de desarrollo pone DJANGO_DEBUG=True; producción va sin .env).
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if not DEBUG and 'test' not in sys.argv:
+        raise ImproperlyConfigured(
+            'Falta DJANGO_SECRET_KEY: es obligatoria cuando DEBUG=False. '
+            'Definila en el .env o en las variables de entorno.'
+        )
+    # Desarrollo sin .env: clave efímera (cambia en cada reinicio).
+    SECRET_KEY = secrets.token_urlsafe(50)
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -60,6 +71,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Registra respuestas 401/403/429 de la API en el log de seguridad.
+    'config.middleware.RegistroAccesosDenegadosMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -152,6 +165,9 @@ REST_FRAMEWORK = {
         # Cuenta estricta: frena fuerza bruta dirigida aunque venga de muchas IPs.
         'login_ip': '60/min',
         'login_usuario': '10/min',
+        # Recuperación de contraseña: frena spam de correos por IP y por cuenta.
+        'password_reset_ip': '10/h',
+        'password_reset_email': '5/h',
     },
 }
 
@@ -160,6 +176,9 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
+    # Tokens firmados con el hash de la contraseña: al cambiarla (reset desde
+    # la app o desde el admin) todos los access tokens vigentes quedan inválidos.
+    'CHECK_REVOKE_TOKEN': True,
 }
 
 
@@ -194,3 +213,66 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
 ]
+
+
+# --- Correo electrónico (recuperación de contraseñas) ---
+# Por defecto: consola -> el correo se imprime en 'docker logs barberbook_api'.
+# Para envío real: EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+# en el .env junto con EMAIL_HOST/EMAIL_HOST_USER/EMAIL_HOST_PASSWORD.
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get(
+    'EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+DEFAULT_FROM_EMAIL = os.environ.get(
+    'DEFAULT_FROM_EMAIL', 'noreply@barberbook.local')
+
+# URL pública del frontend para armar los enlaces de recuperación
+FRONTEND_URL = os.environ.get(
+    'FRONTEND_URL', 'http://localhost:4200').rstrip('/')
+
+# Vigencia del enlace de recuperación de contraseña (3 días)
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 24 * 3
+
+
+# --- Log de seguridad ---
+# Eventos: logins, accesos denegados (401/403/429), throttles y
+# solicitudes/confirmaciones de recuperación de contraseña.
+# Los archivos de log jamás se versionan (ver .gitignore).
+(BASE_DIR / 'logs').mkdir(exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'seguridad': {
+            'format': '[{asctime}] {levelname} {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
+    'handlers': {
+        'archivo_seguridad': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'seguridad.log',
+            'formatter': 'seguridad',
+            'encoding': 'utf-8',
+        },
+        'consola_seguridad': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'seguridad',
+        },
+    },
+    'loggers': {
+        'seguridad': {
+            'handlers': ['archivo_seguridad', 'consola_seguridad'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

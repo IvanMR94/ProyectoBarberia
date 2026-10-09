@@ -1,14 +1,23 @@
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.utils import timezone
 
+from config.audit import registrar_evento
 from .models import Cita, Barbero, Servicio
 from users.roles import ROL_BARBERO, ROL_CLIENTE, ROL_DUENO, ROL_SUPER_ADMIN
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        data = super().validate(attrs)
+        request = self.context.get('request')
+        try:
+            data = super().validate(attrs)
+        except AuthenticationFailed:
+            registrar_evento(
+                'LOGIN_FALLIDO', 'CREDENCIALES_INVALIDAS',
+                request=request, usuario=attrs.get('username', ''))
+            raise
         user = self.user
 
         # Los roles directos del modelo se respetan tal cual
@@ -19,6 +28,9 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             data['rol'] = ROL_BARBERO if es_barbero else ROL_CLIENTE
 
         data['nombre'] = (user.nombre or '').strip() or user.username
+        registrar_evento(
+            'LOGIN_EXITOSO', 'AUTENTICADO',
+            request=request, usuario=user.username)
         return data
 
 

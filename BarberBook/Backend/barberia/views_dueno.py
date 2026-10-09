@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.roles import ROL_CLIENTE
+from config.audit import registrar_evento
 
 from .models import Barbero, Cita, Servicio
 from .permissions import EsDueno
@@ -172,6 +173,10 @@ class OwnerBarberosView(APIView):
         serializer = BarberoAltaSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         barbero = serializer.save()
+        registrar_evento(
+            'OPERACION_SENSIBLE', 'ALTA_BARBERO',
+            request=request, usuario=request.user.username,
+            detalle=f'barbero_id={barbero.id}')
         return Response(
             BarberoDuenoSerializer(barbero).data,
             status=status.HTTP_201_CREATED,
@@ -194,6 +199,10 @@ class OwnerBarberoDetailView(APIView):
             barbero, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        registrar_evento(
+            'OPERACION_SENSIBLE', 'MODIFICACION_BARBERO',
+            request=request, usuario=request.user.username,
+            detalle=f'barbero_id={barbero.id}')
         return Response(BarberoDuenoSerializer(barbero).data)
 
     def delete(self, request, pk):
@@ -215,6 +224,11 @@ class OwnerBarberoDetailView(APIView):
         barbero.usuario.save(update_fields=['is_active'])
         barbero.save(
             update_fields=['despedido', 'activo', 'nota_pausa'])
+        registrar_evento(
+            'OPERACION_SENSIBLE', 'DESPIDO_BARBERO',
+            request=request, usuario=request.user.username,
+            detalle=f'barbero_id={barbero.id} '
+                    f'citas_canceladas={citas_canceladas}')
         return Response({
             'mensaje': f'{barbero.nombre} fue despedido del equipo.',
             'citas_canceladas': citas_canceladas,
@@ -236,6 +250,10 @@ class OwnerBarberoRecontratarView(APIView):
         barbero.usuario.is_active = True
         barbero.usuario.save(update_fields=['is_active'])
         barbero.save(update_fields=['despedido', 'activo'])
+        registrar_evento(
+            'OPERACION_SENSIBLE', 'RECONTRATACION_BARBERO',
+            request=request, usuario=request.user.username,
+            detalle=f'barbero_id={barbero.id}')
         return Response(BarberoDuenoSerializer(barbero).data)
 
 
@@ -312,6 +330,10 @@ class OwnerServiciosView(APIView):
         serializer = ServicioDuenoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         servicio = serializer.save()
+        registrar_evento(
+            'OPERACION_SENSIBLE', 'ALTA_SERVICIO',
+            request=request, usuario=request.user.username,
+            detalle=f'servicio_id={servicio.id}')
         return Response(
             ServicioDuenoSerializer(servicio).data,
             status=status.HTTP_201_CREATED,
@@ -331,4 +353,8 @@ class OwnerServicioDetailView(APIView):
             servicio, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        registrar_evento(
+            'OPERACION_SENSIBLE', 'MODIFICACION_SERVICIO',
+            request=request, usuario=request.user.username,
+            detalle=f'servicio_id={servicio.id}')
         return Response(ServicioDuenoSerializer(servicio).data)
