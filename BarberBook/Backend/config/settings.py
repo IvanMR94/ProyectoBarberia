@@ -171,6 +171,14 @@ BARBERIA_HORA_FIN = int(os.environ.get('BARBERIA_HORA_FIN', '21'))
 BARBERIA_DURACION_CITA_MINUTOS = int(
     os.environ.get('BARBERIA_DURACION_CITA_MINUTOS', '60'))
 
+# Lealtad / fidelidad: descuentos automáticos por frecuencia de visitas.
+# Medición: visitas COMPLETADAS en los últimos 30 días corridos.
+LEALTAD_VISITAS_MINIMAS = 3          # piso histórico: sin 3 visitas no hay descuento
+LEALTAD_UMBRAL_FRECUENTE = 2         # visitas en 30 días -> Frecuente
+LEALTAD_DESCUENTO_FRECUENTE_PCT = 5
+LEALTAD_UMBRAL_PREFERENCIAL = 3      # visitas en 30 días -> Preferencial
+LEALTAD_DESCUENTO_PREFERENCIAL_PCT = 10
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
     "http://127.0.0.1:4200",

@@ -147,9 +147,29 @@
           </div>
           <div class="flex justify-between gap-3 border-t border-slate-200 pt-2">
             <span class="text-slate-500 font-medium">Precio</span>
-            <span class="font-extrabold text-blue-700 text-base">{{ servicioSeleccionado()?.precio | number:'1.0-0' }}</span>
+            @if (precioFinal() !== null) {
+              <span class="text-right">
+                <span class="text-slate-400 line-through text-sm mr-2">{{ servicioSeleccionado()?.precio | number:'1.0-0' }}</span>
+                <span class="font-extrabold text-emerald-700 text-base">{{ precioFinal() | number:'1.0-0' }}</span>
+              </span>
+            } @else {
+              <span class="font-extrabold text-blue-700 text-base">{{ servicioSeleccionado()?.precio | number:'1.0-0' }}</span>
+            }
           </div>
+          @if (precioFinal() !== null && lealtad(); as l) {
+            <div class="flex justify-end">
+              <span class="px-2 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                {{ l.nivel }} −{{ l.descuento_pct }}%
+              </span>
+            </div>
+          }
         </div>
+
+        <p class="mt-4 text-xs text-slate-500 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 flex gap-2">
+          <span aria-hidden="true">⏱</span>
+          <span><strong class="text-amber-700">Tenés 10 minutos de tolerancia.</strong>
+          Si llegás pasado ese tiempo, el turno puede liberarse.</span>
+        </p>
 
         <button
           (click)="reservarCita()"

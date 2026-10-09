@@ -2,7 +2,7 @@ import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Barber, BarberServicio } from '../models/barber.model';
-import { ApiService } from '../services/api';
+import { ApiService, Lealtad } from '../services/api';
 
 interface CeldaDia {
   fecha: string;       // YYYY-MM-DD
@@ -38,6 +38,17 @@ export class BarberListComponent implements OnInit {
   fechaSeleccionada = signal<string>(this.hoy);
   anio = signal<number>(new Date().getFullYear());
   mes = signal<number>(new Date().getMonth()); // 0-11
+
+  // Lealtad del cliente (para mostrar descuento en el resumen)
+  lealtad = signal<Lealtad | null>(null);
+
+  precioFinal = computed(() => {
+    const l = this.lealtad();
+    const s = this.servicioSeleccionado();
+    if (!l || l.descuento_pct <= 0 || !s) return null;
+    const lista = parseFloat(s.precio);
+    return Number((lista * (100 - l.descuento_pct) / 100).toFixed(2));
+  });
 
   readonly nombresMeses = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -112,6 +123,18 @@ export class BarberListComponent implements OnInit {
     this.servicioSeleccionado.set(null);
     this.servicioSeSalto.set(false);
     this.cargarDisponibilidad();
+    this.cargarLealtad();
+  }
+
+  private cargarLealtad() {
+    if (!localStorage.getItem('access')) {
+      this.lealtad.set(null);
+      return;
+    }
+    this.apiService.getMiLealtad().subscribe({
+      next: (l) => this.lealtad.set(l),
+      error: () => this.lealtad.set(null),
+    });
   }
 
   mesAnterior() {

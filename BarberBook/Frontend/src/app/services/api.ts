@@ -25,6 +25,18 @@ export interface Servicio {
   activo?: boolean;
 }
 
+export interface Lealtad {
+  sellos: number;
+  visitas_30d: number;
+  nivel: 'Frecuente' | 'Preferencial' | null;
+  descuento_pct: number;
+  desbloqueado: boolean;
+  visitas_minimas: number;
+  faltan_para_desbloquear: number;
+  umbral_frecuente: number;
+  umbral_preferencial: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private http = inject(HttpClient);
@@ -83,6 +95,10 @@ export class ApiService {
 
   getMyAppointments(): Observable<Cita[]> {
     return this.http.get<Cita[]>(this.ENDPOINTS.myAppointments);
+  }
+
+  getMiLealtad(): Observable<Lealtad> {
+    return this.http.get<Lealtad>(`${this.baseUrl}/my-loyalty/`);
   }
 
   getBarberAppointments(): Observable<Cita[]> {

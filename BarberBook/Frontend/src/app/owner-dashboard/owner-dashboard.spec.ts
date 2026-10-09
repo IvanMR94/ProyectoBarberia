@@ -65,12 +65,15 @@ describe('OwnerDashboardComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('arranca en la pestaña Resumen con el mes en curso', () => {
+  it('arranca en la pestaña Resumen con el mes en curso completo', () => {
     expect(component.tab()).toBe('resumen');
     const hoy = new Date();
-    const esperado = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
-    expect(component.desde()).toBe(esperado.substring(0, 8) + '01');
-    expect(component.hasta()).toBe(esperado);
+    const desdeEsperado = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-01`;
+    const ultimo = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    const hastaEsperado = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(ultimo.getDate()).padStart(2, '0')}`;
+    expect(component.desde()).toBe(desdeEsperado);
+    // Hasta = fin de mes, para incluir las citas futuras del período
+    expect(component.hasta()).toBe(hastaEsperado);
   });
 
   it('carga los barberos del panel con sus servicios', () => {
@@ -253,5 +256,96 @@ describe('OwnerDashboardComponent', () => {
   it('formatea precios en pesos', () => {
     expect(component.dinero('1000.00')).toContain('1.000');
     expect(component.dinero('0')).toContain('0');
+  });
+
+  it('muestra el nivel de lealtad de cada cliente', () => {
+    component.cambiarTab('clientes');
+    httpMock.expectOne(
+      (r) => r.url.startsWith(`${baseUrl}/owner/clients/`)).flush({
+        clientes: [{
+          id: 1, username: 'ana', nombre: 'Ana', apellido: 'Torres',
+          email: 'ana@test.com', visitas: 3, visitas_30d: 3,
+          nivel: 'Preferencial', ultima_visita: null, gasto: '2700',
+        }, {
+          id: 2, username: 'luis', nombre: 'Luis', apellido: 'Gomez',
+          email: 'luis@test.com', visitas: 1, visitas_30d: 0,
+          nivel: null, ultima_visita: null, gasto: '1000',
+        }],
+      });
+    fixture.detectChanges();
+
+    const texto: string = fixture.nativeElement.textContent;
+    expect(texto).toContain('Preferencial');
+    expect(texto).toContain('Nuevo');
+    expect(component.clientes()[0].visitas_30d).toBe(3);
+  });
+
+  function refrescarCon(statsExtra: object, barberoExtra: object,
+                        cortes: object[]) {
+    component.refrescarPeriodo();
+    httpMock.expectOne(
+      (r) => r.url.startsWith(`${baseUrl}/owner/stats/`)).flush({
+        desde: '2026-10-01', hasta: '2026-10-31',
+        cortes: 1, ingresos: '900.00',
+        clientes_atendidos: 1, clientes_nuevos: 0,
+        por_barbero: [], por_servicio: [],
+        ...statsExtra,
+      });
+    httpMock.expectOne(
+      (r) => r.url.startsWith(`${baseUrl}/owner/barbers/`)).flush({
+        desde: '2026-10-01', hasta: '2026-10-31',
+        barberos: [{ ...barberoFixture, ...barberoExtra }],
+      });
+    httpMock.expectOne(
+      (r) => r.url.startsWith(`${baseUrl}/owner/appointments/`))
+      .flush({ cortes });
+    fixture.detectChanges();
+  }
+
+  it('el KPI refleja los descuentos otorgados en el período', () => {
+    refrescarCon({ descuentos: '100.00' }, {}, []);
+
+    const kpi = component.kpis()
+      .find((k) => k.label === 'Descuentos otorgados');
+    expect(kpi?.valor).toContain('100');
+    expect(fixture.nativeElement.textContent)
+      .toContain('Descuentos otorgados');
+  });
+
+  it('el detalle de cortes muestra el estado y el descuento aplicado', () => {
+    refrescarCon({ descuentos: '100.00' }, {}, [{
+      id: 1, fecha: '2026-10-10T10:00:00Z', barbero: 'Omar Rios',
+      cliente: 'Ana Torres', servicio_nombre: 'Corte', estado: 'PENDIENTE',
+      precio: '900.00', descuento_aplicado: '100.00',
+    }]);
+
+    const texto: string = fixture.nativeElement.textContent;
+    expect(texto).toContain('PENDIENTE');
+    expect(texto).toContain('Descuento');
+    expect(component.conDescuento('100.00')).toBe(true);
+    expect(component.conDescuento('0.00')).toBe(false);
+    expect(component.conDescuento(undefined)).toBe(false);
+  });
+
+  it('la card del barbero muestra citas a realizar y descuentos', () => {
+    refrescarCon({}, { cortes: 1, ingresos: '900.00',
+      descuentos: '100.00', pendientes: 2 }, []);
+    component.cambiarTab('barberos');
+    fixture.detectChanges();
+
+    const texto: string = fixture.nativeElement.textContent;
+    expect(texto).toContain('2 a realizar');
+    expect(texto).toContain('en descuentos');
+    expect(component.barberos()[0].pendientes).toBe(2);
+  });
+
+  it('sin descuentos ni pendientes no muestra los chips', () => {
+    refrescarCon({}, { pendientes: 0, descuentos: '0' }, []);
+    component.cambiarTab('barberos');
+    fixture.detectChanges();
+
+    const texto: string = fixture.nativeElement.textContent;
+    expect(texto).not.toContain('a realizar');
+    expect(texto).not.toContain('en descuentos');
   });
 });

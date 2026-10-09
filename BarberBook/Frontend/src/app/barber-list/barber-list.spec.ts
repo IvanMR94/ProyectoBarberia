@@ -14,6 +14,11 @@ describe('BarberListComponent', () => {
   let router: Router;
   const baseUrl = environment.apiUrl;
   const barbero = { id: 4, nombre: 'Omar', apellido: 'Rios' };
+  const lealtad = {
+    sellos: 5, visitas_30d: 3, nivel: 'Preferencial', descuento_pct: 10,
+    desbloqueado: true, visitas_minimas: 3, faltan_para_desbloquear: 0,
+    umbral_frecuente: 2, umbral_preferencial: 3,
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -108,6 +113,9 @@ describe('BarberListComponent', () => {
       component.openAgenda(conServicios);
       httpMock.expectOne((r) => r.url.includes('/availability/'))
         .flush({ disponibles: ['10:00'] });
+      if (localStorage.getItem('access')) {
+        httpMock.expectOne((r) => r.url.includes('/my-loyalty/')).flush(lealtad);
+      }
     }
 
     it('hora → servicio → resumen y confirma con el servicio elegido', () => {
@@ -175,6 +183,52 @@ describe('BarberListComponent', () => {
       component.atras();
       expect(component.paso()).toBe('servicio');
       expect(component.servicioSeleccionado()).toBeNull();
+    });
+
+    it('pide la lealtad del cliente al abrir la agenda', () => {
+      localStorage.setItem('access', 'token');
+      component.openAgenda({ ...barbero, servicios });
+      httpMock.expectOne((r) => r.url.includes('/availability/'))
+        .flush({ disponibles: ['10:00'] });
+
+      const req = httpMock.expectOne((r) => r.url.includes('/my-loyalty/'));
+      req.flush(lealtad);
+      expect(component.lealtad()?.descuento_pct).toBe(10);
+      localStorage.clear();
+    });
+
+    it('muestra el precio con descuento y el aviso de tolerancia en el resumen', () => {
+      localStorage.setItem('access', 'token');
+      abrirConServicios();
+
+      component.elegirHora('10:00');
+      component.elegirServicio(servicios[0]); // 1000 con −10% → 900
+      fixture.detectChanges();
+
+      expect(component.precioFinal()).toBe(900);
+      const texto: string = fixture.nativeElement.textContent;
+      expect(texto).toContain('10 minutos de tolerancia');
+      expect(texto).toContain('Preferencial');
+      localStorage.clear();
+    });
+
+    it('sin nivel no aplica descuento en el resumen', () => {
+      localStorage.setItem('access', 'token');
+      component.openAgenda({ ...barbero, servicios });
+      httpMock.expectOne((r) => r.url.includes('/availability/'))
+        .flush({ disponibles: ['10:00'] });
+      httpMock.expectOne((r) => r.url.includes('/my-loyalty/')).flush({
+        ...lealtad, nivel: null, descuento_pct: 0, desbloqueado: false,
+        sellos: 1, visitas_30d: 1, faltan_para_desbloquear: 2,
+      });
+
+      component.elegirHora('10:00');
+      component.elegirServicio(servicios[0]);
+      fixture.detectChanges();
+
+      expect(component.precioFinal()).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('10 minutos de tolerancia');
+      localStorage.clear();
     });
   });
 });

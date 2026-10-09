@@ -15,6 +15,7 @@ urlpatterns = [
     # --- Citas Cliente ---
     path('appointments/', views.CitaCreateView.as_view(), name='cita-create'),
     path('my-appointments/', views.MisCitasListView.as_view(), name='mis-citas'),
+    path('my-loyalty/', views.MiLealtadView.as_view(), name='mi-lealtad'),
     path('appointments/<int:pk>/', views.CitaManageView.as_view(), name='cita-manage'),
     
     # --- Dashboard Barbero ---

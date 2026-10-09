@@ -52,10 +52,11 @@ class CitaSerializer(serializers.ModelSerializer):
         model = Cita
         fields = [
             'id', 'barbero', 'servicio', 'fecha_hora_inicio', 'estado',
-            'cliente', 'precio', 'barbero_nombre', 'barbero_apellido',
-            'servicio_nombre',
+            'cliente', 'precio', 'descuento_aplicado',
+            'barbero_nombre', 'barbero_apellido', 'servicio_nombre',
         ]
-        read_only_fields = ['estado', 'cliente', 'precio']
+        read_only_fields = [
+            'estado', 'cliente', 'precio', 'descuento_aplicado']
         extra_kwargs = {
             'servicio': {'required': True},
         }
@@ -92,7 +93,22 @@ class CitaSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # Precio al momento de reservar: cambia el catálogo, no la historia
-        validated_data['precio'] = validated_data['servicio'].precio
+        from decimal import Decimal
+
+        from .services import calcular_descuento_lealtad
+
+        precio_lista = validated_data['servicio'].precio
+        pct, _nivel = calcular_descuento_lealtad(
+            self.context['request'].user)
+        if pct:
+            precio_final = (
+                precio_lista * Decimal(100 - pct) / Decimal(100)
+            ).quantize(Decimal('0.01'))
+            validated_data['descuento_aplicado'] = (
+                precio_lista - precio_final)
+            validated_data['precio'] = precio_final
+        else:
+            validated_data['precio'] = precio_lista
         return super().create(validated_data)
 
 

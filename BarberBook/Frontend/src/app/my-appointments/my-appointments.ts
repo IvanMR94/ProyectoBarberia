@@ -1,5 +1,5 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
-import { ApiService } from '../services/api';
+import { ApiService, Lealtad } from '../services/api';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -11,9 +11,13 @@ import { CommonModule } from '@angular/common';
 export class MyAppointmentsComponent implements OnInit {
   citas = signal<any[]>([]);
   isLoading = signal<boolean>(false);
+  lealtad = signal<Lealtad | null>(null);
   private apiService = inject(ApiService);
 
-  ngOnInit() { this.loadCitas(); }
+  ngOnInit() {
+    this.loadCitas();
+    this.loadLealtad();
+  }
 
   loadCitas() {
     this.isLoading.set(true);
@@ -24,6 +28,25 @@ export class MyAppointmentsComponent implements OnInit {
       },
       error: () => this.isLoading.set(false)
     });
+  }
+
+  private loadLealtad() {
+    this.apiService.getMiLealtad().subscribe({
+      next: (l) => this.lealtad.set(l),
+      error: () => this.lealtad.set(null),
+    });
+  }
+
+  puntosDesbloqueo(): boolean[] {
+    const l = this.lealtad();
+    if (!l) return [];
+    const minimo = l.visitas_minimas;
+    const actuales = Math.min(l.sellos, minimo);
+    return Array.from({ length: minimo }, (_, i) => i < actuales);
+  }
+
+  conDescuento(cita: any): boolean {
+    return parseFloat(cita?.descuento_aplicado || '0') > 0;
   }
 
   cancelarCita(id: number) {

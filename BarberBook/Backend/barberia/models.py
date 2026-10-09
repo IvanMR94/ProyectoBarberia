@@ -51,6 +51,9 @@ class Cita(models.Model):
     # Precio al momento de reservar: cambia el catálogo, no la facturación histórica
     precio = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True)
+    # Descuento de lealtad aplicado al reservar (el precio ya lo incluye)
+    descuento_aplicado = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0)
 
     class Meta:
         constraints = [

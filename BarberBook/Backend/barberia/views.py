@@ -114,3 +114,11 @@ class BarberCitaUpdateView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     def get_queryset(self):
         return Cita.objects.filter(barbero__usuario=self.request.user)
+
+
+class MiLealtadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from .services import datos_lealtad
+        return Response(datos_lealtad(request.user))

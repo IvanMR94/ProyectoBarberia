@@ -1,4 +1,5 @@
 from datetime import datetime, time, timedelta
+import calendar
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -678,8 +679,173 @@ class ClientesYServiciosDuenoTests(BaseApiTest):
             f'/api/v1/owner/appointments/?desde={self.fecha_futura}&'
             f'hasta={self.fecha_futura}')
         self.assertEqual(r.status_code, 200)
-        self.assertEqual(len(r.data['cortes']), 1)
-        corte = r.data['cortes'][0]
-        self.assertEqual(corte['barbero'], 'Omar Rios')
-        self.assertEqual(corte['cliente'], 'Ana Torres')
-        self.assertEqual(corte['servicio_nombre'], 'Corte')
+        # El detalle lista todas las citas del período, con su estado
+        self.assertEqual(len(r.data['cortes']), 2)
+        estados = {c['id']: c['estado'] for c in r.data['cortes']}
+        self.assertEqual(sorted(estados.values()),
+                         ['CANCELADA', 'COMPLETADA'])
+        completada = next(
+            c for c in r.data['cortes'] if c['estado'] == 'COMPLETADA')
+        self.assertEqual(completada['barbero'], 'Omar Rios')
+        self.assertEqual(completada['cliente'], 'Ana Torres')
+        self.assertEqual(completada['servicio_nombre'], 'Corte')
+        self.assertEqual(completada['descuento_aplicado'], '0')
+
+
+class LealtadTests(BaseApiTest):
+    """Descuentos por lealtad: piso de 3 visitas + niveles en 30 días."""
+
+    def _completar_visitas(self, cantidad, dias_atras=0, hora_base=8):
+        hoy = timezone.localtime().date()
+        for i in range(cantidad):
+            self.crear_cita(
+                hora=hora_base + i, estado='COMPLETADA',
+                fecha=hoy - timedelta(days=dias_atras))
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_authenticate(self.cliente)
+
+    def test_sin_3_visitas_no_hay_descuento(self):
+        self._completar_visitas(2)
+        r = self.reservar(hora='15:00')
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.data['precio'], '1000.00')
+        self.assertEqual(r.data['descuento_aplicado'], '0.00')
+
+    def test_piso_de_3_visitas_bloquea_el_nivel(self):
+        # 2 en los últimos 30 días, pero solo 2 históricas: sin desbloqueo
+        self._completar_visitas(2)
+        r = self.reservar(hora='15:00')
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.data['precio'], '1000.00')
+
+    def test_frecuente_2_visitas_en_30_dias_da_5_pct(self):
+        self._completar_visitas(1, dias_atras=40)  # fuera de la ventana
+        self._completar_visitas(2)                  # dentro de 30 días
+        r = self.reservar(hora='15:00')
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.data['precio'], '950.00')
+        self.assertEqual(r.data['descuento_aplicado'], '50.00')
+
+    def test_preferencial_3_visitas_en_30_dias_da_10_pct(self):
+        self._completar_visitas(3)
+        r = self.reservar(hora='15:00')
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.data['precio'], '900.00')
+        self.assertEqual(r.data['descuento_aplicado'], '100.00')
+
+    def test_visitas_viejas_no_cuentan_para_los_30_dias(self):
+        self._completar_visitas(4, dias_atras=40)
+        r = self.reservar(hora='15:00')
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.data['precio'], '1000.00')
+        self.assertEqual(r.data['descuento_aplicado'], '0.00')
+
+    def test_my_loyalty_requiere_token(self):
+        self.client.force_authenticate(user=None)
+        r = self.client.get('/api/v1/my-loyalty/')
+        self.assertEqual(r.status_code, 401)
+
+    def test_my_loyalty_devuelve_el_estado(self):
+        self._completar_visitas(2)
+        r = self.client.get('/api/v1/my-loyalty/')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data['sellos'], 2)
+        self.assertEqual(r.data['visitas_30d'], 2)
+        self.assertFalse(r.data['desbloqueado'])
+        self.assertEqual(r.data['faltan_para_desbloquear'], 1)
+        self.assertIsNone(r.data['nivel'])
+
+        self._completar_visitas(1, hora_base=11)
+        r2 = self.client.get('/api/v1/my-loyalty/')
+        self.assertTrue(r2.data['desbloqueado'])
+        self.assertEqual(r2.data['faltan_para_desbloquear'], 0)
+        self.assertEqual(r2.data['nivel'], 'Preferencial')
+        self.assertEqual(r2.data['descuento_pct'], 10)
+
+    def test_el_dueno_ve_el_nivel_de_los_clientes(self):
+        self._completar_visitas(3)
+        dueno = User.objects.create_user(
+            username='dueno_lealtad', password='dueno12345', rol=ROL_DUENO)
+        self.client.force_authenticate(dueno)
+
+        r = self.client.get('/api/v1/owner/clients/')
+        self.assertEqual(r.status_code, 200)
+        cliente = r.data['clientes'][0]
+        self.assertEqual(cliente['visitas'], 3)
+        self.assertEqual(cliente['visitas_30d'], 3)
+        self.assertEqual(cliente['nivel'], 'Preferencial')
+
+
+class DashboardDescuentosTests(BaseApiTest):
+    """El dashboard del dueño refleja descuentos, estados y pendientes."""
+
+    def setUp(self):
+        super().setUp()
+        self.dueno = User.objects.create_user(
+            username='dueno_dash', password='dueno12345', rol=ROL_DUENO)
+        self.client.force_authenticate(self.dueno)
+        self.rango = (
+            f'?desde={self.fecha_futura}&hasta={self.fecha_futura}')
+
+    def _cita_con_descuento(self, hora, estado):
+        cita = self.crear_cita(hora=hora, estado=estado)
+        Cita.objects.filter(pk=cita.pk).update(
+            precio=900, descuento_aplicado=100)
+        return cita
+
+    def test_stats_refleja_ingresos_finales_y_descuentos(self):
+        self._cita_con_descuento(10, 'COMPLETADA')
+        self.crear_cita(hora=11, estado='COMPLETADA')
+        self.crear_cita(hora=12, estado='PENDIENTE')
+
+        r = self.client.get(f'/api/v1/owner/stats/{self.rango}')
+        self.assertEqual(r.status_code, 200)
+        # La pendiente no suma facturación ni descuentos
+        self.assertEqual(r.data['cortes'], 2)
+        self.assertEqual(r.data['ingresos'], '1900.00')
+        self.assertEqual(r.data['descuentos'], '100.00')
+        self.assertEqual(r.data['por_barbero'][0]['ingresos'], '1900.00')
+        self.assertEqual(r.data['por_barbero'][0]['descuentos'], '100.00')
+        self.assertEqual(r.data['por_servicio'][0]['descuentos'], '100.00')
+
+    def test_detalle_lista_todas_las_citas_con_estado_y_descuento(self):
+        pendiente = self._cita_con_descuento(10, 'PENDIENTE')
+        completada = self.crear_cita(hora=11, estado='COMPLETADA')
+
+        r = self.client.get(f'/api/v1/owner/appointments/{self.rango}')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.data['cortes']), 2)
+
+        por_id = {c['id']: c for c in r.data['cortes']}
+        self.assertEqual(por_id[pendiente.id]['estado'], 'PENDIENTE')
+        self.assertEqual(por_id[pendiente.id]['precio'], '900.00')
+        self.assertEqual(por_id[pendiente.id]['descuento_aplicado'], '100.00')
+        self.assertEqual(por_id[completada.id]['estado'], 'COMPLETADA')
+        self.assertEqual(por_id[completada.id]['descuento_aplicado'], '0')
+
+    def test_cards_de_barberos_incluyen_pendientes_y_descuentos(self):
+        self._cita_con_descuento(10, 'PENDIENTE')
+        self._cita_con_descuento(11, 'COMPLETADA')
+        self._cita_con_descuento(12, 'CONFIRMADA')
+
+        r = self.client.get(f'/api/v1/owner/barbers/{self.rango}')
+        self.assertEqual(r.status_code, 200)
+        b = r.data['barberos'][0]
+        self.assertEqual(b['cortes'], 1)
+        self.assertEqual(b['ingresos'], '900.00')
+        self.assertEqual(b['descuentos'], '100.00')
+        self.assertEqual(b['pendientes'], 2)
+        self.assertEqual(len(b['servicios']), 1)
+
+    def test_el_rango_default_incluye_citas_futuras_del_mes(self):
+        hoy = timezone.localtime().date()
+        ultimo = hoy.replace(day=calendar.monthrange(hoy.year, hoy.month)[1])
+        fecha = hoy if hoy >= ultimo else hoy + timedelta(days=1)
+        cita = self.crear_cita(
+            hora=10, estado='PENDIENTE', fecha=fecha)
+
+        r = self.client.get('/api/v1/owner/appointments/')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(cita.id, [c['id'] for c in r.data['cortes']])

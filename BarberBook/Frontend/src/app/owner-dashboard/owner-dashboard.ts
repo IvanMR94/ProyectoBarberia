@@ -16,6 +16,8 @@ interface BarberoPanel {
   servicios: Servicio[];
   cortes: number;
   ingresos: string;
+  descuentos?: string;
+  pendientes?: number;
 }
 
 @Component({
@@ -40,7 +42,7 @@ export class OwnerDashboardComponent implements OnInit {
 
   readonly hoy = new Date();
   desde = signal(this.primerDiaDelMes());
-  hasta = signal(this.formatoFecha(this.hoy));
+  hasta = signal(this.ultimoDiaDelMes());
 
   stats = signal<any>(null);
   barberos = signal<BarberoPanel[]>([]);
@@ -65,6 +67,7 @@ export class OwnerDashboardComponent implements OnInit {
     return [
       { label: 'Cortes realizados', valor: String(s.cortes) },
       { label: 'Facturación', valor: this.dinero(s.ingresos) },
+      { label: 'Descuentos otorgados', valor: this.dinero(s.descuentos) },
       { label: 'Clientes atendidos', valor: String(s.clientes_atendidos) },
       { label: 'Clientes nuevos', valor: String(s.clientes_nuevos) },
     ];
@@ -343,6 +346,13 @@ export class OwnerDashboardComponent implements OnInit {
   }
 
   // --- Utilidades ---
+  conDescuento(valor: string | number | null | undefined): boolean {
+    const numero = typeof valor === 'number'
+      ? valor
+      : parseFloat(valor || '0');
+    return Number.isFinite(numero) && numero > 0;
+  }
+
   nombreCompleto(nombre: string, apellido: string): string {
     return `${nombre} ${apellido}`.trim();
   }
@@ -366,6 +376,11 @@ export class OwnerDashboardComponent implements OnInit {
   private primerDiaDelMes(): string {
     return this.formatoFecha(
       new Date(this.hoy.getFullYear(), this.hoy.getMonth(), 1));
+  }
+
+  private ultimoDiaDelMes(): string {
+    return this.formatoFecha(
+      new Date(this.hoy.getFullYear(), this.hoy.getMonth() + 1, 0));
   }
 
   private formatoFecha(d: Date): string {

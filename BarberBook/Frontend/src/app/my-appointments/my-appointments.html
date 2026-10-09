@@ -7,7 +7,46 @@
       {{ isLoading() ? 'Actualizando...' : '↻ Refrescar' }}
     </button>
   </div>
-  
+
+  @if (lealtad(); as l) {
+    <div class="mb-6 bg-white rounded-2xl border border-blue-50 p-5 shadow-sm">
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <div class="min-w-0">
+          <p class="text-sm font-bold text-blue-950">Carnet de fidelidad</p>
+          @if (l.desbloqueado) {
+            <p class="text-xs text-slate-500 mt-0.5">
+              {{ l.sellos }} visita/s completadas · {{ l.visitas_30d }} en los últimos 30 días
+            </p>
+          } @else {
+            <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+              @for (p of puntosDesbloqueo(); track $index) {
+                <span class="w-3.5 h-3.5 rounded-full"
+                      [ngClass]="p ? 'bg-blue-500' : 'bg-slate-200'"></span>
+              }
+              <span class="text-xs text-slate-500 ml-1.5">
+                Te falta/n {{ l.faltan_para_desbloquear }} visita/s para desbloquear tus descuentos
+              </span>
+            </div>
+          }
+        </div>
+        @if (l.desbloqueado && l.nivel) {
+          <span class="shrink-0 px-3 py-1.5 text-sm font-bold rounded-full border"
+                [ngClass]="l.nivel === 'Preferencial'
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-blue-50 text-blue-700 border-blue-200'">
+            {{ l.nivel }} −{{ l.descuento_pct }}%
+          </span>
+        }
+      </div>
+      @if (l.desbloqueado && !l.nivel) {
+        <p class="text-xs text-slate-500 mt-2">
+          Visitános {{ l.umbral_frecuente }} veces en 30 días para ser Frecuente (−5%) y
+          {{ l.umbral_preferencial }} para Preferencial (−10%).
+        </p>
+      }
+    </div>
+  }
+
   <div class="space-y-4">
     @if (isLoading() && citas().length === 0) {
       <div class="text-center py-20">
@@ -29,6 +68,9 @@
               }
               @if (cita.precio) {
                 <span class="text-blue-600 font-semibold"> · {{ cita.precio | number:'1.0-0' }}</span>
+              }
+              @if (conDescuento(cita)) {
+                <span class="text-emerald-600 font-semibold"> · −{{ cita.descuento_aplicado | number:'1.0-0' }} de descuento</span>
               }
             </p>
             <div class="mt-2">

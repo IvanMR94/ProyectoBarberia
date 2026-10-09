@@ -25,12 +25,15 @@ class BarberoDuenoSerializer(serializers.ModelSerializer):
     servicios = ServicioSerializer(many=True, read_only=True)
     cortes = serializers.SerializerMethodField()
     ingresos = serializers.SerializerMethodField()
+    descuentos = serializers.SerializerMethodField()
+    pendientes = serializers.SerializerMethodField()
 
     class Meta:
         model = Barbero
         fields = [
             'id', 'nombre', 'apellido', 'email', 'activo', 'nota_pausa',
-            'despedido', 'servicios', 'cortes', 'ingresos',
+            'despedido', 'servicios', 'cortes', 'ingresos', 'descuentos',
+            'pendientes',
         ]
 
     def get_cortes(self, obj):
@@ -39,6 +42,13 @@ class BarberoDuenoSerializer(serializers.ModelSerializer):
     def get_ingresos(self, obj):
         valor = getattr(obj, 'ingresos_periodo', None)
         return str(valor) if valor is not None else '0'
+
+    def get_descuentos(self, obj):
+        valor = getattr(obj, 'descuentos_periodo', None)
+        return str(valor) if valor is not None else '0'
+
+    def get_pendientes(self, obj):
+        return int(getattr(obj, 'pendientes_periodo', 0) or 0)
 
 
 class BarberoAltaSerializer(serializers.Serializer):
@@ -86,6 +96,8 @@ class BarberoUpdateSerializer(serializers.ModelSerializer):
 
 class ClienteDuenoSerializer(serializers.ModelSerializer):
     visitas = serializers.SerializerMethodField()
+    visitas_30d = serializers.SerializerMethodField()
+    nivel = serializers.SerializerMethodField()
     gasto = serializers.SerializerMethodField()
     ultima_visita = serializers.SerializerMethodField()
 
@@ -93,11 +105,20 @@ class ClienteDuenoSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'nombre', 'apellido', 'username', 'email',
-            'visitas', 'gasto', 'ultima_visita',
+            'visitas', 'visitas_30d', 'nivel', 'gasto', 'ultima_visita',
         ]
 
     def get_visitas(self, obj):
         return int(getattr(obj, 'visitas', 0) or 0)
+
+    def get_visitas_30d(self, obj):
+        return int(getattr(obj, 'visitas_30d', 0) or 0)
+
+    def get_nivel(self, obj):
+        from .services import nivel_y_descuento
+        _pct, nivel = nivel_y_descuento(
+            self.get_visitas(obj), self.get_visitas_30d(obj))
+        return nivel
 
     def get_gasto(self, obj):
         valor = getattr(obj, 'gasto', None)
@@ -114,11 +135,12 @@ class CorteDuenoSerializer(serializers.ModelSerializer):
     cliente = serializers.SerializerMethodField()
     servicio_nombre = serializers.CharField(
         source='servicio.nombre', read_only=True, default=None)
+    descuento_aplicado = serializers.SerializerMethodField()
 
     class Meta:
         model = Cita
-        fields = ['id', 'fecha', 'barbero', 'cliente',
-                  'servicio_nombre', 'precio']
+        fields = ['id', 'fecha', 'barbero', 'cliente', 'servicio_nombre',
+                  'estado', 'precio', 'descuento_aplicado']
 
     def get_barbero(self, obj):
         return f"{obj.barbero.nombre} {obj.barbero.apellido}".strip()
@@ -126,3 +148,6 @@ class CorteDuenoSerializer(serializers.ModelSerializer):
     def get_cliente(self, obj):
         completo = f"{obj.cliente.nombre} {obj.cliente.apellido}".strip()
         return completo or obj.cliente.username
+
+    def get_descuento_aplicado(self, obj):
+        return str(obj.descuento_aplicado or 0)

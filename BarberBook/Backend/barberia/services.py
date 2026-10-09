@@ -1,7 +1,62 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.utils import timezone
 
 from .models import Barbero, Cita, Servicio
+
+
+def nivel_y_descuento(visitas_historicas, visitas_30d):
+    """Regla pura de lealtad: devuelve (pct, nivel).
+
+    Piso de visitas históricas para acceder a cualquier descuento;
+    después mide frecuencia en los últimos 30 días. Nunca se acumulan.
+    """
+    if visitas_historicas < settings.LEALTAD_VISITAS_MINIMAS:
+        return 0, None
+    if visitas_30d >= settings.LEALTAD_UMBRAL_PREFERENCIAL:
+        return settings.LEALTAD_DESCUENTO_PREFERENCIAL_PCT, 'Preferencial'
+    if visitas_30d >= settings.LEALTAD_UMBRAL_FRECUENTE:
+        return settings.LEALTAD_DESCUENTO_FRECUENTE_PCT, 'Frecuente'
+    return 0, None
+
+
+def calcular_descuento_lealtad(cliente):
+    """Cuenta las visitas del cliente y devuelve (pct, nivel)."""
+    historicas = Cita.objects.filter(
+        cliente=cliente, estado=Cita.ESTADO_COMPLETADA).count()
+    desde = timezone.now() - timedelta(days=30)
+    ultimas = Cita.objects.filter(
+        cliente=cliente,
+        estado=Cita.ESTADO_COMPLETADA,
+        fecha_hora_inicio__gte=desde,
+    ).count()
+    return nivel_y_descuento(historicas, ultimas)
+
+
+def datos_lealtad(cliente):
+    """Payload completo de lealtad para el cliente."""
+    historicas = Cita.objects.filter(
+        cliente=cliente, estado=Cita.ESTADO_COMPLETADA).count()
+    desde = timezone.now() - timedelta(days=30)
+    ultimas = Cita.objects.filter(
+        cliente=cliente,
+        estado=Cita.ESTADO_COMPLETADA,
+        fecha_hora_inicio__gte=desde,
+    ).count()
+    pct, nivel = nivel_y_descuento(historicas, ultimas)
+    minimo = settings.LEALTAD_VISITAS_MINIMAS
+    return {
+        'sellos': historicas,
+        'visitas_30d': ultimas,
+        'nivel': nivel,
+        'descuento_pct': pct,
+        'desbloqueado': historicas >= minimo,
+        'visitas_minimas': minimo,
+        'faltan_para_desbloquear': max(0, minimo - historicas),
+        'umbral_frecuente': settings.LEALTAD_UMBRAL_FRECUENTE,
+        'umbral_preferencial': settings.LEALTAD_UMBRAL_PREFERENCIAL,
+    }
 
 
 def get_disponibilidad_barbero(barbero_id, fecha):

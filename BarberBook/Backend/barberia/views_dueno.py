@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+import calendar
 
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Max, Q, Sum, Value
@@ -34,10 +35,11 @@ def _parse_fecha(valor):
 
 
 def _rango_periodo(params):
-    """Rango desde/hasta con default: mes en curso hasta hoy."""
+    """Rango desde/hasta con default: mes en curso completo (incluye futuro)."""
     hoy = timezone.localdate()
     desde = _parse_fecha(params.get('desde')) or hoy.replace(day=1)
-    hasta = _parse_fecha(params.get('hasta')) or hoy
+    hasta = _parse_fecha(params.get('hasta')) or hoy.replace(
+        day=calendar.monthrange(hoy.year, hoy.month)[1])
     if desde > hasta:
         raise ParseError('"desde" no puede ser posterior a "hasta".')
     return desde, hasta
@@ -54,6 +56,14 @@ def _citas_completadas(desde, hasta, extra=None):
     return queryset
 
 
+def _citas_periodo(desde, hasta):
+    """Todas las citas del período, sin importar el estado."""
+    return Cita.objects.filter(
+        fecha_hora_inicio__date__gte=desde,
+        fecha_hora_inicio__date__lte=hasta,
+    )
+
+
 class OwnerStatsView(APIView):
     permission_classes = [IsAuthenticated, EsDueno]
 
@@ -62,7 +72,10 @@ class OwnerStatsView(APIView):
         citas = _citas_completadas(desde, hasta)
 
         totales = citas.aggregate(
-            cortes=Count('id'), ingresos=Sum('precio'))
+            cortes=Count('id'),
+            ingresos=Sum('precio'),
+            descuentos=Sum('descuento_aplicado'),
+        )
 
         por_barbero = [
             {
@@ -73,12 +86,14 @@ class OwnerStatsView(APIView):
                 'cortes': fila['cortes'],
                 'horas': fila['cortes'],
                 'ingresos': str(fila['ingresos'] or 0),
+                'descuentos': str(fila['descuentos'] or 0),
             }
             for fila in citas.values(
                 'barbero_id', 'barbero__nombre', 'barbero__apellido',
             ).annotate(
                 cortes=Count('id'),
                 ingresos=Sum('precio'),
+                descuentos=Sum('descuento_aplicado'),
             ).order_by('-cortes')
         ]
 
@@ -87,6 +102,7 @@ class OwnerStatsView(APIView):
                 'servicio': fila['servicio_nombre'],
                 'cortes': fila['cortes'],
                 'ingresos': str(fila['ingresos'] or 0),
+                'descuentos': str(fila['descuentos'] or 0),
             }
             for fila in citas.annotate(
                 servicio_nombre=Coalesce(
@@ -94,6 +110,7 @@ class OwnerStatsView(APIView):
             ).values('servicio_nombre').annotate(
                 cortes=Count('id'),
                 ingresos=Sum('precio'),
+                descuentos=Sum('descuento_aplicado'),
             ).order_by('-cortes')
         ]
 
@@ -102,6 +119,7 @@ class OwnerStatsView(APIView):
             'hasta': hasta.isoformat(),
             'cortes': totales['cortes'] or 0,
             'ingresos': str(totales['ingresos'] or 0),
+            'descuentos': str(totales['descuentos'] or 0),
             'clientes_atendidos': citas.values('cliente_id').distinct().count(),
             'clientes_nuevos': User.objects.filter(
                 rol=ROL_CLIENTE,
@@ -123,6 +141,12 @@ class OwnerBarberosView(APIView):
             citas__fecha_hora_inicio__date__gte=desde,
             citas__fecha_hora_inicio__date__lte=hasta,
         )
+        pendientes = Q(
+            citas__estado__in=[
+                Cita.ESTADO_PENDIENTE, Cita.ESTADO_CONFIRMADA],
+            citas__fecha_hora_inicio__date__gte=desde,
+            citas__fecha_hora_inicio__date__lte=hasta,
+        )
         barberos = (
             Barbero.objects
             .select_related('usuario')
@@ -130,6 +154,10 @@ class OwnerBarberosView(APIView):
             .annotate(
                 cortes_periodo=Count('citas', filter=periodo, distinct=True),
                 ingresos_periodo=Sum('citas__precio', filter=periodo),
+                descuentos_periodo=Sum(
+                    'citas__descuento_aplicado', filter=periodo),
+                pendientes_periodo=Count(
+                    'citas', filter=pendientes, distinct=True),
             )
             .order_by('nombre')
         )
@@ -216,12 +244,21 @@ class OwnerClientesView(APIView):
 
     def get(self, request):
         q = request.query_params.get('q', '').strip()
+        desde_30 = timezone.now() - timedelta(days=30)
         visitas = Count(
             'citas',
             filter=Q(citas__estado=Cita.ESTADO_COMPLETADA),
         )
+        visitas_30d = Count(
+            'citas',
+            filter=Q(
+                citas__estado=Cita.ESTADO_COMPLETADA,
+                citas__fecha_hora_inicio__gte=desde_30,
+            ),
+        )
         clientes = User.objects.filter(rol=ROL_CLIENTE).annotate(
             visitas=visitas,
+            visitas_30d=visitas_30d,
             gasto=Sum(
                 'citas__precio',
                 filter=Q(citas__estado=Cita.ESTADO_COMPLETADA),
@@ -248,7 +285,9 @@ class OwnerCitasView(APIView):
 
     def get(self, request):
         desde, hasta = _rango_periodo(request.query_params)
-        citas = _citas_completadas(desde, hasta).select_related(
+        # El detalle lista todas las citas del período (cualquier estado)
+        # para que el dueño vea pendientes y descuentos aplicados.
+        citas = _citas_periodo(desde, hasta).select_related(
             'barbero', 'cliente', 'servicio').order_by('-fecha_hora_inicio')
 
         barbero_id = request.query_params.get('barbero')
